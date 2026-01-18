@@ -102,9 +102,13 @@ class GameState {
     }
 
     removeEntity(entity) {
+        // Use swap-and-pop for O(1) removal instead of O(n) splice
         const removeFrom = (arr) => {
             const idx = arr.indexOf(entity);
-            if (idx !== -1) arr.splice(idx, 1);
+            if (idx !== -1) {
+                arr[idx] = arr[arr.length - 1];
+                arr.pop();
+            }
         };
 
         removeFrom(this.entities);

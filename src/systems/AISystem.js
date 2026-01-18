@@ -164,9 +164,14 @@ class AIPlayer {
                 continue;
             }
 
-            // Find nearest ore node
-            const oreNodes = [...gameState.oreNodes, ...gameState.crystalNodes]
-                .filter(n => !n.depleted);
+            // Find nearest ore node (avoid spread operator in hot path)
+            const oreNodes = [];
+            for (const node of gameState.oreNodes) {
+                if (!node.depleted) oreNodes.push(node);
+            }
+            for (const node of gameState.crystalNodes) {
+                if (!node.depleted) oreNodes.push(node);
+            }
 
             if (oreNodes.length === 0) continue;
 

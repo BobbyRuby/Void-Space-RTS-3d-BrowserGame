@@ -34,6 +34,8 @@ export class Unit extends Entity {
         this.targetX = x;
         this.targetZ = z;
         this.moveCommand = null;
+        this.command = 'idle';
+        this.guardTarget = null;
 
         // Combat
         this.attackTarget = null;

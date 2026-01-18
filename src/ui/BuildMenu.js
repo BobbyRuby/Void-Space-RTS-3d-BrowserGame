@@ -291,7 +291,6 @@ export class BuildMenu {
         });
 
         // Game events
-        eventBus.on(GameEvents.BUILDING_COMPLETE, () => this.updateAvailableItems());
         eventBus.on(GameEvents.BUILDING_COMPLETED, () => this.updateAvailableItems());
         eventBus.on(GameEvents.RESOURCES_CHANGED, () => this.updateItemStates());
         eventBus.on(GameEvents.RESOURCE_CHANGED, () => this.updateItemStates());

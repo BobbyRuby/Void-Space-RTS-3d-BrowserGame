@@ -69,7 +69,6 @@ export class Pathfinding {
         this.gridHeight = 0;
         this.grid = null; // Navigation grid (walkability)
         this.staticObstacles = null; // Buildings, etc.
-        this.dynamicObstacles = new Set(); // Units (updated frequently)
 
         // Path caching
         this.pathCache = new Map();
@@ -128,50 +127,6 @@ export class Pathfinding {
     }
 
     // ===== Obstacle Management =====
-
-    addStaticObstacle(worldX, worldZ, radius) {
-        const center = this.worldToGrid(worldX, worldZ);
-        const gridRadius = Math.ceil(radius / this.gridSize);
-
-        for (let dz = -gridRadius; dz <= gridRadius; dz++) {
-            for (let dx = -gridRadius; dx <= gridRadius; dx++) {
-                const gx = center.x + dx;
-                const gz = center.z + dz;
-                if (!this.isInBounds(gx, gz)) continue;
-
-                const dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist <= gridRadius) {
-                    const idx = this.getIndex(gx, gz);
-                    this.staticObstacles[idx] = 1;
-                    this.grid[idx] = 1;
-                }
-            }
-        }
-
-        this.clearPathCache();
-    }
-
-    removeStaticObstacle(worldX, worldZ, radius) {
-        const center = this.worldToGrid(worldX, worldZ);
-        const gridRadius = Math.ceil(radius / this.gridSize);
-
-        for (let dz = -gridRadius; dz <= gridRadius; dz++) {
-            for (let dx = -gridRadius; dx <= gridRadius; dx++) {
-                const gx = center.x + dx;
-                const gz = center.z + dz;
-                if (!this.isInBounds(gx, gz)) continue;
-
-                const dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist <= gridRadius) {
-                    const idx = this.getIndex(gx, gz);
-                    this.staticObstacles[idx] = 0;
-                    this.grid[idx] = 0;
-                }
-            }
-        }
-
-        this.clearPathCache();
-    }
 
     updateFromGameState() {
         // Reset grid to static obstacles only
@@ -464,101 +419,10 @@ export class Pathfinding {
         };
     }
 
-    // ===== Flow Fields (for group movement) =====
-
-    createFlowField(targetX, targetZ) {
-        const target = this.worldToGrid(targetX, targetZ);
-        const flowField = new Map();
-        const costField = new Map();
-
-        const queue = [target];
-        const targetKey = `${target.x},${target.z}`;
-        costField.set(targetKey, 0);
-
-        // BFS to calculate costs
-        while (queue.length > 0) {
-            const current = queue.shift();
-            const currentKey = `${current.x},${current.z}`;
-            const currentCost = costField.get(currentKey);
-
-            for (const dir of this.directions) {
-                const nx = current.x + dir.dx;
-                const nz = current.z + dir.dz;
-                const neighborKey = `${nx},${nz}`;
-
-                if (!this.isWalkable(nx, nz)) continue;
-                if (costField.has(neighborKey)) continue;
-
-                costField.set(neighborKey, currentCost + dir.cost);
-                queue.push({ x: nx, z: nz });
-            }
-        }
-
-        // Calculate flow directions
-        for (const [key, cost] of costField) {
-            const [x, z] = key.split(',').map(Number);
-            let bestDir = null;
-            let bestCost = cost;
-
-            for (const dir of this.directions) {
-                const nx = x + dir.dx;
-                const nz = z + dir.dz;
-                const neighborKey = `${nx},${nz}`;
-                const neighborCost = costField.get(neighborKey);
-
-                if (neighborCost !== undefined && neighborCost < bestCost) {
-                    bestCost = neighborCost;
-                    bestDir = { x: dir.dx, z: dir.dz };
-                }
-            }
-
-            if (bestDir) {
-                flowField.set(key, bestDir);
-            }
-        }
-
-        return flowField;
-    }
-
-    getFlowDirection(flowField, worldX, worldZ) {
-        const grid = this.worldToGrid(worldX, worldZ);
-        const key = `${grid.x},${grid.z}`;
-        return flowField.get(key) || null;
-    }
-
     // ===== Utility =====
 
     clearPathCache() {
         this.pathCache.clear();
-    }
-
-    // Debug visualization
-    debugDraw(ctx, mapSize, canvasSize) {
-        const scale = canvasSize / mapSize;
-        const cellSize = this.gridSize * scale;
-
-        ctx.globalAlpha = 0.3;
-
-        for (let gz = 0; gz < this.gridHeight; gz++) {
-            for (let gx = 0; gx < this.gridWidth; gx++) {
-                const idx = this.getIndex(gx, gz);
-                if (this.grid[idx] > 0) {
-                    const world = this.gridToWorld(gx, gz);
-                    const screenX = (world.x + mapSize / 2) * scale;
-                    const screenZ = (world.z + mapSize / 2) * scale;
-
-                    ctx.fillStyle = '#ff0000';
-                    ctx.fillRect(
-                        screenX - cellSize / 2,
-                        screenZ - cellSize / 2,
-                        cellSize,
-                        cellSize
-                    );
-                }
-            }
-        }
-
-        ctx.globalAlpha = 1;
     }
 
     dispose() {

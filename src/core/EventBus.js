@@ -154,7 +154,6 @@ export const GameEvents = {
     UNIT_SPAWNED: 'unit:spawned',
     UNIT_KILLED: 'unit:killed',
     UNIT_COMMAND: 'unit:command',
-    UNIT_ARRIVED: 'unit:arrived',
     UNIT_ATTACK: 'unit:attack',
 
     // Building events
@@ -162,11 +161,9 @@ export const GameEvents = {
     BUILDING_COMPLETED: 'building:completed',
     BUILDING_DESTROYED: 'building:destroyed',
     BUILDING_QUEUE_START: 'building:queue:start',
-    BUILDING_QUEUE_COMPLETE: 'building:queue:complete',
 
     // Resource events
     RESOURCE_CHANGED: 'resource:changed',
-    RESOURCE_COLLECTED: 'resource:collected',
     RESOURCE_SPENT: 'resource:spent',
     RESOURCE_DEPLETED: 'resource:depleted',
     RESOURCE_REGROWN: 'resource:regrown',
@@ -181,8 +178,6 @@ export const GameEvents = {
     UI_BUILD_MODE_EXIT: 'ui:buildmode:exit',
     UI_SELECTION_CHANGED: 'ui:selection:changed',
     UI_ALERT: 'ui:alert',
-    UI_TOOLTIP_SHOW: 'ui:tooltip:show',
-    UI_TOOLTIP_HIDE: 'ui:tooltip:hide',
 
     // Input events
     INPUT_CLICK: 'input:click',
@@ -251,7 +246,6 @@ export const GameEvents = {
 
     // Rally point events
     RALLY_POINT_SET: 'rally:point:set',
-    RALLY_POINT_CLEAR: 'rally:point:clear',
 
     // Force field events
     FORCE_FIELD_CREATED: 'forcefield:created',

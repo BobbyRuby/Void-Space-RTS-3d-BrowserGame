@@ -202,6 +202,10 @@ export class FogOfWar {
         const center = this.worldToGrid(worldX, worldZ);
         const gridRadius = Math.ceil(radius / this.gridSize);
 
+        // Pre-compute squared values outside the loop
+        const gridSizeSquared = this.gridSize * this.gridSize;
+        const radiusSquared = radius * radius;
+
         // Reveal cells within radius
         for (let dz = -gridRadius; dz <= gridRadius; dz++) {
             for (let dx = -gridRadius; dx <= gridRadius; dx++) {
@@ -210,9 +214,9 @@ export class FogOfWar {
 
                 if (gx < 0 || gx >= this.gridWidth || gz < 0 || gz >= this.gridHeight) continue;
 
-                // Check if within circular radius
-                const dist = Math.sqrt(dx * dx + dz * dz) * this.gridSize;
-                if (dist <= radius) {
+                // Check if within circular radius (using squared distance to avoid sqrt)
+                const distSquared = (dx * dx + dz * dz) * gridSizeSquared;
+                if (distSquared <= radiusSquared) {
                     const idx = this.getIndex(gx, gz);
                     vis[idx] = Visibility.VISIBLE;
                     exp[idx] = 1; // Mark as permanently explored

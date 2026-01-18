@@ -24,10 +24,6 @@ export class CombatSystem {
         this.smokeParticleSystem = null;
         this.impactParticleSystem = null;
 
-        // Mesh pools for reuse
-        this.projectileMeshPool = [];
-        this.particleMeshPool = [];
-
         // Muzzle flash light pool (reduces light creation/destruction overhead)
         this.lightPool = [];
         this.lightPoolSize = 30;
