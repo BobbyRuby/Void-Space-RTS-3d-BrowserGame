@@ -1,6 +1,7 @@
 // ============================================================
-// VOID SUPREMACY 3D - Command Panel UI
+// VOID SUPREMACY 3D - Command Panel UI (Section Component)
 // Action buttons for selected units/buildings
+// Renders into MainPanel's command section
 // ============================================================
 
 import { CONFIG, TEAMS } from '../core/Config.js';
@@ -29,8 +30,10 @@ export class CommandPanel {
         this.container = null;
         this.commandGrid = null;
         this.selectedEntities = [];
+        this.parentSection = null;
 
         // Command definitions
+        // Hotkeys designed to avoid conflicts with camera controls (WASD, Q, E)
         this.commands = {
             [CommandType.MOVE]: {
                 icon: '➡️',
@@ -43,15 +46,15 @@ export class CommandPanel {
             [CommandType.ATTACK]: {
                 icon: '⚔️',
                 name: 'Attack',
-                hotkey: 'A',
-                description: 'Attack target or move to attack',
-                available: (entities) => entities.some(e => e.stats?.damage > 0),
+                hotkey: 'G',
+                description: 'Attack-move to location',
+                available: (entities) => entities.some(e => e.stats?.damage > 0 || e.def?.damage > 0),
                 action: () => this.startAttackCommand()
             },
             [CommandType.STOP]: {
                 icon: '⏹️',
                 name: 'Stop',
-                hotkey: 'S',
+                hotkey: 'X',
                 description: 'Stop current action',
                 available: (entities) => entities.some(e => !e.isBuilding),
                 action: () => this.stopCommand()
@@ -61,7 +64,7 @@ export class CommandPanel {
                 name: 'Hold',
                 hotkey: 'H',
                 description: 'Hold position and attack nearby enemies',
-                available: (entities) => entities.some(e => e.stats?.damage > 0),
+                available: (entities) => entities.some(e => e.stats?.damage > 0 || e.def?.damage > 0),
                 action: () => this.holdCommand()
             },
             [CommandType.PATROL]: {
@@ -75,9 +78,9 @@ export class CommandPanel {
             [CommandType.GUARD]: {
                 icon: '🛡️',
                 name: 'Guard',
-                hotkey: 'G',
+                hotkey: 'Z',
                 description: 'Guard a unit or position',
-                available: (entities) => entities.some(e => e.stats?.damage > 0),
+                available: (entities) => entities.some(e => e.stats?.damage > 0 || e.def?.damage > 0),
                 action: () => this.startGuardCommand()
             },
             [CommandType.HARVEST]: {
@@ -107,9 +110,9 @@ export class CommandPanel {
             [CommandType.CANCEL]: {
                 icon: '❌',
                 name: 'Cancel',
-                hotkey: 'Escape',
+                hotkey: 'Esc',
                 description: 'Cancel current production',
-                available: (entities) => entities.some(e => e.isBuilding && e.productionQueue?.length > 0),
+                available: (entities) => entities.some(e => e.isBuilding && (e.productionQueue?.length > 0 || e.buildQueue?.length > 0)),
                 action: () => this.cancelProduction()
             }
         };
@@ -119,7 +122,8 @@ export class CommandPanel {
         this.currentFormation = FormationType.BOX;
     }
 
-    init() {
+    init(parentSection) {
+        this.parentSection = parentSection;
         this.createUI();
         this.setupEventListeners();
         console.log('Command Panel initialized');
@@ -129,56 +133,56 @@ export class CommandPanel {
         this.container = document.createElement('div');
         this.container.id = 'commandPanel';
         this.container.innerHTML = `
-            <div class="command-header">
+            <div class="section-header">
                 <span class="command-title">COMMANDS</span>
                 <span class="command-mode" id="commandModeDisplay"></span>
             </div>
-            <div class="command-grid" id="commandGrid"></div>
-            <div class="formation-display" id="formationDisplay">
-                Formation: <span id="currentFormation">Box</span>
+            <div class="command-content">
+                <div class="command-grid" id="commandGrid"></div>
+                <div class="formation-display" id="formationDisplay">
+                    Formation: <span id="currentFormation">Box</span>
+                </div>
             </div>
         `;
 
         this.injectStyles();
-        document.getElementById('hud').appendChild(this.container);
+
+        // Append to parent section
+        if (this.parentSection) {
+            this.parentSection.appendChild(this.container);
+        }
 
         this.commandGrid = document.getElementById('commandGrid');
+
+        // Initialize with empty state
+        this.updateCommands();
     }
 
     injectStyles() {
+        if (document.getElementById('commandPanelStyles')) return;
+
         const style = document.createElement('style');
+        style.id = 'commandPanelStyles';
         style.textContent = `
             #commandPanel {
-                position: absolute;
-                bottom: 10px;
-                left: 560px;
-                width: 200px;
-                height: 90px;
-                background: rgba(5, 15, 30, 0.95);
-                border: 2px solid #0af;
-                border-radius: 5px;
+                display: flex;
+                flex-direction: column;
+                height: 100%;
                 font-family: 'Exo 2', sans-serif;
-                box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
-                display: none;
-                overflow: hidden;
             }
 
-            #commandPanel.visible {
-                display: block;
-            }
-
-            .command-header {
+            #commandPanel .section-header {
+                padding: 4px 8px;
+                background: rgba(0, 100, 200, 0.2);
+                border-bottom: 1px solid #068;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 4px 8px;
-                border-bottom: 1px solid #068;
-                background: rgba(0, 100, 200, 0.2);
             }
 
             .command-title {
                 font-family: 'Orbitron', sans-serif;
-                font-size: 9px;
+                font-size: 10px;
                 color: #0af;
                 letter-spacing: 1px;
             }
@@ -189,19 +193,27 @@ export class CommandPanel {
                 text-transform: uppercase;
             }
 
+            .command-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                padding: 6px;
+            }
+
             .command-grid {
                 display: grid;
                 grid-template-columns: repeat(5, 1fr);
-                gap: 3px;
-                padding: 5px;
+                gap: 4px;
+                flex: 1;
             }
 
             .command-btn {
-                width: 34px;
-                height: 34px;
+                aspect-ratio: 1;
+                min-width: 36px;
+                max-width: 42px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
-                border-radius: 3px;
+                border-radius: 4px;
                 cursor: pointer;
                 display: flex;
                 flex-direction: column;
@@ -214,6 +226,7 @@ export class CommandPanel {
             .command-btn:hover:not(.disabled) {
                 background: rgba(0, 100, 200, 0.4);
                 border-color: #0af;
+                transform: scale(1.05);
             }
 
             .command-btn.active {
@@ -227,8 +240,12 @@ export class CommandPanel {
                 cursor: not-allowed;
             }
 
+            .command-btn.disabled:hover {
+                transform: none;
+            }
+
             .command-icon {
-                font-size: 16px;
+                font-size: 18px;
             }
 
             .command-name {
@@ -237,19 +254,20 @@ export class CommandPanel {
 
             .command-hotkey {
                 position: absolute;
-                top: 1px;
-                right: 2px;
-                font-size: 7px;
+                top: 2px;
+                right: 3px;
+                font-size: 8px;
                 color: #0af;
                 font-family: 'Orbitron', sans-serif;
             }
 
             .formation-display {
-                padding: 3px 8px;
-                border-top: 1px solid #068;
-                font-size: 8px;
+                padding: 4px 0;
+                font-size: 9px;
                 color: #68a;
                 text-align: center;
+                border-top: 1px solid #068;
+                margin-top: 4px;
             }
 
             .formation-display span {
@@ -258,11 +276,11 @@ export class CommandPanel {
             }
 
             /* Command cursor indicators */
-            .cursor-move { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">➡️</text></svg>'), auto; }
-            .cursor-attack { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">⚔️</text></svg>'), auto; }
-            .cursor-patrol { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">🔄</text></svg>'), auto; }
-            .cursor-guard { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">🛡️</text></svg>'), auto; }
-            .cursor-harvest { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">⛏️</text></svg>'), auto; }
+            body.cursor-move { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">➡️</text></svg>'), auto; }
+            body.cursor-attack { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">⚔️</text></svg>'), auto; }
+            body.cursor-patrol { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">🔄</text></svg>'), auto; }
+            body.cursor-guard { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">🛡️</text></svg>'), auto; }
+            body.cursor-harvest { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">⛏️</text></svg>'), auto; }
         `;
         document.head.appendChild(style);
     }
@@ -280,22 +298,16 @@ export class CommandPanel {
 
     onSelectionChanged(selection) {
         this.selectedEntities = selection || [];
-
-        if (this.selectedEntities.length === 0) {
-            this.hide();
-            this.clearCommandMode();
-            return;
-        }
-
-        this.show();
         this.updateCommands();
     }
 
     updateCommands() {
         this.commandGrid.innerHTML = '';
 
+        const hasSelection = this.selectedEntities.length > 0;
+
         for (const [type, cmd] of Object.entries(this.commands)) {
-            const isAvailable = cmd.available(this.selectedEntities);
+            const isAvailable = hasSelection && cmd.available(this.selectedEntities);
             const isActive = this.commandMode === type;
 
             const btn = document.createElement('div');
@@ -321,8 +333,11 @@ export class CommandPanel {
         }
 
         // Update formation display
-        document.getElementById('currentFormation').textContent =
-            this.currentFormation.charAt(0).toUpperCase() + this.currentFormation.slice(1);
+        const formationEl = document.getElementById('currentFormation');
+        if (formationEl) {
+            formationEl.textContent =
+                this.currentFormation.charAt(0).toUpperCase() + this.currentFormation.slice(1);
+        }
     }
 
     // ===== Command Handlers =====
@@ -442,13 +457,18 @@ export class CommandPanel {
 
     setCommandMode(mode) {
         this.commandMode = mode;
-        document.getElementById('commandModeDisplay').textContent =
-            mode ? this.commands[mode]?.name.toUpperCase() : '';
+        const modeDisplay = document.getElementById('commandModeDisplay');
+        if (modeDisplay) {
+            modeDisplay.textContent = mode ? this.commands[mode]?.name.toUpperCase() : '';
+        }
     }
 
     clearCommandMode() {
         this.commandMode = null;
-        document.getElementById('commandModeDisplay').textContent = '';
+        const modeDisplay = document.getElementById('commandModeDisplay');
+        if (modeDisplay) {
+            modeDisplay.textContent = '';
+        }
 
         // Remove all cursor classes
         document.body.classList.remove(
@@ -468,7 +488,7 @@ export class CommandPanel {
 
         for (const [type, cmd] of Object.entries(this.commands)) {
             if (cmd.hotkey.toUpperCase() === upperKey) {
-                if (cmd.available(this.selectedEntities)) {
+                if (this.selectedEntities.length > 0 && cmd.available(this.selectedEntities)) {
                     cmd.action();
                     this.updateCommands();
                     return true;
@@ -485,19 +505,29 @@ export class CommandPanel {
         return false;
     }
 
-    // ===== Visibility =====
+    // ===== Visibility (Deprecated - always visible now) =====
 
     show() {
-        this.container.classList.add('visible');
+        // No-op: Always visible in MainPanel
     }
 
     hide() {
-        this.container.classList.remove('visible');
+        // No-op: Always visible in MainPanel
+    }
+
+    isVisible() {
+        return true; // Always visible
     }
 
     dispose() {
         this.clearCommandMode();
-        this.container.remove();
+        if (this.container) {
+            this.container.remove();
+        }
+        const style = document.getElementById('commandPanelStyles');
+        if (style) {
+            style.remove();
+        }
     }
 }
 

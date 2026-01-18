@@ -1,6 +1,7 @@
 // ============================================================
-// VOID SUPREMACY 3D - Build Menu UI
+// VOID SUPREMACY 3D - Build Menu UI (Section Component)
 // Construction menu for buildings and unit production
+// Renders into MainPanel's build section
 // ============================================================
 
 import { CONFIG, BUILDINGS, UNITS, TEAMS } from '../core/Config.js';
@@ -28,6 +29,7 @@ export class BuildMenu {
         this.selectedBuildingType = null;
         this.isPlacingBuilding = false;
         this.placementGhost = null;
+        this.parentSection = null;
 
         // Tab state
         this.activeTab = 'buildings';
@@ -61,7 +63,8 @@ export class BuildMenu {
         };
     }
 
-    init() {
+    init(parentSection) {
+        this.parentSection = parentSection;
         this.createUI();
         this.setupEventListeners();
         this.updateAvailableItems();
@@ -73,9 +76,8 @@ export class BuildMenu {
         this.container = document.createElement('div');
         this.container.id = 'buildMenu';
         this.container.innerHTML = `
-            <div class="build-menu-header">
+            <div class="section-header">
                 <span class="build-menu-title">CONSTRUCTION</span>
-                <button class="build-menu-close" id="closeBuildMenu">×</button>
             </div>
             <div class="build-menu-tabs">
                 <button class="build-tab active" data-tab="buildings">Buildings</button>
@@ -86,7 +88,7 @@ export class BuildMenu {
                 <div class="build-list hidden" id="unitList"></div>
             </div>
             <div class="build-menu-info" id="buildInfo">
-                <div class="info-name">Select an item to build</div>
+                <div class="info-name">Hover to see info</div>
                 <div class="info-desc"></div>
                 <div class="info-cost"></div>
             </div>
@@ -95,7 +97,10 @@ export class BuildMenu {
         // Inject styles
         this.injectStyles();
 
-        document.getElementById('hud').appendChild(this.container);
+        // Append to parent section
+        if (this.parentSection) {
+            this.parentSection.appendChild(this.container);
+        }
 
         // Cache references
         this.buildingList = document.getElementById('buildingList');
@@ -104,54 +109,29 @@ export class BuildMenu {
     }
 
     injectStyles() {
+        if (document.getElementById('buildMenuStyles')) return;
+
         const style = document.createElement('style');
+        style.id = 'buildMenuStyles';
         style.textContent = `
             #buildMenu {
-                position: absolute;
-                bottom: 10px;
-                left: 10px;
-                width: 250px;
-                height: 90px;
-                background: rgba(5, 15, 30, 0.95);
-                border: 2px solid #0af;
-                border-radius: 5px;
-                font-family: 'Exo 2', sans-serif;
-                box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
-                display: none;
-                overflow: hidden;
-            }
-
-            #buildMenu.visible {
-                display: block;
-            }
-
-            .build-menu-header {
                 display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 3px 8px;
-                border-bottom: 1px solid #0af;
+                flex-direction: column;
+                height: 100%;
+                font-family: 'Exo 2', sans-serif;
+            }
+
+            #buildMenu .section-header {
+                padding: 4px 8px;
                 background: rgba(0, 100, 200, 0.2);
+                border-bottom: 1px solid #068;
             }
 
             .build-menu-title {
                 font-family: 'Orbitron', sans-serif;
-                font-size: 9px;
+                font-size: 10px;
                 color: #0af;
                 letter-spacing: 1px;
-            }
-
-            .build-menu-close {
-                background: none;
-                border: none;
-                color: #0af;
-                font-size: 14px;
-                cursor: pointer;
-                padding: 0 3px;
-            }
-
-            .build-menu-close:hover {
-                color: #fff;
             }
 
             .build-menu-tabs {
@@ -161,12 +141,12 @@ export class BuildMenu {
 
             .build-tab {
                 flex: 1;
-                padding: 4px;
+                padding: 6px;
                 background: none;
                 border: none;
                 color: #68a;
                 font-family: 'Orbitron', sans-serif;
-                font-size: 9px;
+                font-size: 10px;
                 cursor: pointer;
                 transition: all 0.2s;
             }
@@ -183,16 +163,16 @@ export class BuildMenu {
             }
 
             .build-menu-content {
-                padding: 4px;
-                max-height: 42px;
+                flex: 1;
+                padding: 6px;
                 overflow-x: auto;
-                overflow-y: hidden;
+                overflow-y: auto;
             }
 
             .build-list {
-                display: flex;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
                 gap: 4px;
-                flex-wrap: nowrap;
             }
 
             .build-list.hidden {
@@ -200,12 +180,12 @@ export class BuildMenu {
             }
 
             .build-item {
-                width: 36px;
-                height: 36px;
-                min-width: 36px;
+                aspect-ratio: 1;
+                min-width: 50px;
+                max-width: 60px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
-                border-radius: 3px;
+                border-radius: 4px;
                 cursor: pointer;
                 display: flex;
                 flex-direction: column;
@@ -218,6 +198,7 @@ export class BuildMenu {
             .build-item:hover {
                 background: rgba(0, 100, 200, 0.4);
                 border-color: #0af;
+                transform: scale(1.05);
             }
 
             .build-item.disabled {
@@ -227,10 +208,11 @@ export class BuildMenu {
 
             .build-item.disabled:hover {
                 border-color: #068;
+                transform: none;
             }
 
             .build-item-icon {
-                font-size: 18px;
+                font-size: 22px;
             }
 
             .build-item-name {
@@ -239,28 +221,65 @@ export class BuildMenu {
 
             .build-item-hotkey {
                 position: absolute;
-                top: 1px;
-                left: 2px;
-                font-size: 7px;
+                top: 2px;
+                left: 3px;
+                font-size: 8px;
                 color: #0af;
                 font-family: 'Orbitron', sans-serif;
             }
 
             .build-item-cost {
                 position: absolute;
-                bottom: 1px;
-                right: 2px;
-                font-size: 6px;
+                bottom: 2px;
+                right: 3px;
+                font-size: 7px;
                 color: #ffd700;
             }
 
+            .build-item-cost.unaffordable {
+                color: #f44;
+            }
+
             .build-menu-info {
-                display: none;
+                padding: 6px 8px;
+                border-top: 1px solid #068;
+                background: rgba(0, 50, 100, 0.2);
+                min-height: 45px;
+            }
+
+            .build-menu-info .info-name {
+                font-family: 'Orbitron', sans-serif;
+                font-size: 10px;
+                color: #0af;
+                margin-bottom: 2px;
+            }
+
+            .build-menu-info .info-desc {
+                font-size: 9px;
+                color: #8ab;
+                margin-bottom: 3px;
+            }
+
+            .build-menu-info .info-cost {
+                display: flex;
+                gap: 8px;
+                font-size: 9px;
+            }
+
+            .build-menu-info .cost-item {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+            }
+
+            .build-menu-info .cost-item.insufficient {
+                color: #f44;
             }
 
             /* Scrollbar styling */
             .build-menu-content::-webkit-scrollbar {
-                height: 3px;
+                width: 4px;
+                height: 4px;
             }
 
             .build-menu-content::-webkit-scrollbar-track {
@@ -281,14 +300,11 @@ export class BuildMenu {
             tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
         });
 
-        // Close button
-        document.getElementById('closeBuildMenu').addEventListener('click', () => {
-            this.hide();
-        });
-
         // Game events
         eventBus.on(GameEvents.BUILDING_COMPLETE, () => this.updateAvailableItems());
+        eventBus.on(GameEvents.BUILDING_COMPLETED, () => this.updateAvailableItems());
         eventBus.on(GameEvents.RESOURCES_CHANGED, () => this.updateItemStates());
+        eventBus.on(GameEvents.RESOURCE_CHANGED, () => this.updateItemStates());
     }
 
     switchTab(tab) {
@@ -302,6 +318,11 @@ export class BuildMenu {
         // Show/hide lists
         this.buildingList.classList.toggle('hidden', tab !== 'buildings');
         this.unitList.classList.toggle('hidden', tab !== 'units');
+
+        // Update info
+        this.buildInfo.querySelector('.info-name').textContent = 'Hover to see info';
+        this.buildInfo.querySelector('.info-desc').textContent = '';
+        this.buildInfo.querySelector('.info-cost').innerHTML = '';
     }
 
     updateAvailableItems() {
@@ -339,7 +360,7 @@ export class BuildMenu {
                 <span class="build-item-hotkey">${building.hotkey}</span>
                 <span class="build-item-icon">${building.icon}</span>
                 <span class="build-item-name">${building.name}</span>
-                <span class="build-item-cost">$${cost.credits}</span>
+                <span class="build-item-cost ${!canBuild ? 'unaffordable' : ''}">$${cost.credits}</span>
             `;
 
             item.addEventListener('mouseenter', () => {
@@ -390,7 +411,7 @@ export class BuildMenu {
                 <span class="build-item-hotkey">${unit.hotkey}</span>
                 <span class="build-item-icon">${unit.icon}</span>
                 <span class="build-item-name">${unit.name}</span>
-                <span class="build-item-cost">$${cost.credits}</span>
+                <span class="build-item-cost ${!canBuild ? 'unaffordable' : ''}">$${cost.credits}</span>
             `;
 
             item.addEventListener('mouseenter', () => {
@@ -411,23 +432,21 @@ export class BuildMenu {
         const playerRes = gameState.getResources(TEAMS.PLAYER) || {};
         cost = cost || normalizeCost(config.cost);
 
-        this.buildInfo.innerHTML = `
-            <div class="info-name">${item.name}</div>
-            <div class="info-desc">${item.desc}</div>
-            <div class="info-cost">
-                <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
-                    💰 ${cost.credits}
-                </span>
-                ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
-                    🪨 ${cost.ore}
-                </span>` : ''}
-                ${cost.crystals ? `<span class="cost-item ${(playerRes.crystals || 0) < cost.crystals ? 'insufficient' : ''}">
-                    💎 ${cost.crystals}
-                </span>` : ''}
-                ${cost.energy ? `<span class="cost-item ${(playerRes.energy || 0) < cost.energy ? 'insufficient' : ''}">
-                    ⚡ ${cost.energy}
-                </span>` : ''}
-            </div>
+        this.buildInfo.querySelector('.info-name').textContent = item.name;
+        this.buildInfo.querySelector('.info-desc').textContent = item.desc;
+        this.buildInfo.querySelector('.info-cost').innerHTML = `
+            <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
+                💰 ${cost.credits}
+            </span>
+            ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
+                🪨 ${cost.ore}
+            </span>` : ''}
+            ${cost.crystals ? `<span class="cost-item ${(playerRes.crystals || 0) < cost.crystals ? 'insufficient' : ''}">
+                💎 ${cost.crystals}
+            </span>` : ''}
+            ${cost.energy ? `<span class="cost-item ${(playerRes.energy || 0) < cost.energy ? 'insufficient' : ''}">
+                ⚡ ${cost.energy}
+            </span>` : ''}
         `;
     }
 
@@ -435,19 +454,17 @@ export class BuildMenu {
         const playerRes = gameState.getResources(TEAMS.PLAYER) || {};
         cost = cost || normalizeCost(config.cost);
 
-        this.buildInfo.innerHTML = `
-            <div class="info-name">${item.name}</div>
-            <div class="info-desc">${item.desc}</div>
-            <div class="info-cost">
-                <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
-                    💰 ${cost.credits}
-                </span>
-                ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
-                    🪨 ${cost.ore}
-                </span>` : ''}
-                <span class="cost-item">⏱ ${(config.buildTime || 0)}s</span>
-                <span class="cost-item">👥 ${config.supply || 1}</span>
-            </div>
+        this.buildInfo.querySelector('.info-name').textContent = item.name;
+        this.buildInfo.querySelector('.info-desc').textContent = item.desc;
+        this.buildInfo.querySelector('.info-cost').innerHTML = `
+            <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
+                💰 ${cost.credits}
+            </span>
+            ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
+                🪨 ${cost.ore}
+            </span>` : ''}
+            <span class="cost-item">⏱ ${(config.buildTime || 0)}s</span>
+            <span class="cost-item">👥 ${config.supply || 1}</span>
         `;
     }
 
@@ -463,6 +480,11 @@ export class BuildMenu {
                 if (config) {
                     const cost = normalizeCost(config.cost);
                     canBuild = this.canAfford(cost) && this.meetsRequirements(config);
+                    // Update cost display
+                    const costEl = item.querySelector('.build-item-cost');
+                    if (costEl) {
+                        costEl.classList.toggle('unaffordable', !this.canAfford(cost));
+                    }
                 }
             } else {
                 const config = UNITS[type];
@@ -471,6 +493,11 @@ export class BuildMenu {
                     canBuild = this.canAfford(cost) &&
                         this.hasProductionBuilding(type) &&
                         this.hasEnoughSupply(config.supply || 1);
+                    // Update cost display
+                    const costEl = item.querySelector('.build-item-cost');
+                    if (costEl) {
+                        costEl.classList.toggle('unaffordable', !this.canAfford(cost));
+                    }
                 }
             }
 
@@ -533,7 +560,6 @@ export class BuildMenu {
         this.selectedBuildingType = type;
         this.isPlacingBuilding = true;
         eventBus.emit(GameEvents.BUILDING_PLACEMENT_START, { type });
-        this.hide();
     }
 
     cancelBuildingPlacement() {
@@ -563,8 +589,10 @@ export class BuildMenu {
                 const cost = normalizeCost(config.cost);
                 if (this.canAfford(cost) && this.meetsRequirements(config)) {
                     this.startBuildingPlacement(type);
+                    return true;
                 }
             }
+            return true; // Key was recognized even if action failed
         } else if (this.activeTab === 'units' && this.unitHotkeys[lowerKey]) {
             const type = this.unitHotkeys[lowerKey];
             const config = UNITS[type];
@@ -574,36 +602,50 @@ export class BuildMenu {
                     this.hasProductionBuilding(type) &&
                     this.hasEnoughSupply(config.supply || 1)) {
                     this.queueUnit(type);
+                    return true;
                 }
             }
+            return true; // Key was recognized even if action failed
         }
+
+        // Tab switching with number keys
+        if (key === '1') {
+            this.switchTab('buildings');
+            return true;
+        } else if (key === '2') {
+            this.switchTab('units');
+            return true;
+        }
+
+        return false;
     }
 
-    // ===== Visibility =====
+    // ===== Visibility (Deprecated - always visible now) =====
 
     show() {
-        this.container.classList.add('visible');
-        this.updateAvailableItems();
+        // No-op: Always visible in MainPanel
     }
 
     hide() {
-        this.container.classList.remove('visible');
+        // No-op: Always visible in MainPanel
     }
 
     toggle() {
-        if (this.container.classList.contains('visible')) {
-            this.hide();
-        } else {
-            this.show();
-        }
+        // No-op: Always visible in MainPanel
     }
 
     isVisible() {
-        return this.container.classList.contains('visible');
+        return true; // Always visible
     }
 
     dispose() {
-        this.container.remove();
+        if (this.container) {
+            this.container.remove();
+        }
+        const style = document.getElementById('buildMenuStyles');
+        if (style) {
+            style.remove();
+        }
     }
 }
 

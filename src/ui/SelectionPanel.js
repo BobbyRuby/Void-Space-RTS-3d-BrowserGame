@@ -1,6 +1,7 @@
 // ============================================================
-// VOID SUPREMACY 3D - Selection Panel UI
+// VOID SUPREMACY 3D - Selection Panel UI (Section Component)
 // Displays information about selected entities
+// Renders into MainPanel's selection section
 // ============================================================
 
 import { CONFIG, BUILDINGS, UNITS, TEAMS } from '../core/Config.js';
@@ -13,12 +14,15 @@ export class SelectionPanel {
         this.singleView = null;
         this.multiView = null;
         this.productionView = null;
+        this.emptyView = null;
+        this.parentSection = null;
 
         this.selectedEntities = [];
         this.updateInterval = null;
     }
 
-    init() {
+    init(parentSection) {
+        this.parentSection = parentSection;
         this.createUI();
         this.setupEventListeners();
         console.log('Selection Panel initialized');
@@ -28,72 +32,138 @@ export class SelectionPanel {
         this.container = document.createElement('div');
         this.container.id = 'selectionPanel';
         this.container.innerHTML = `
-            <!-- Single Unit View -->
-            <div class="selection-view" id="singleView">
-                <div class="entity-portrait">
-                    <span class="portrait-icon" id="entityIcon">🚀</span>
-                    <div class="entity-health-bar">
-                        <div class="health-fill" id="entityHealthFill"></div>
+            <div class="section-header">
+                <span class="selection-title">SELECTION</span>
+                <span class="selection-count" id="selectionCount"></span>
+            </div>
+            <div class="selection-content">
+                <!-- Empty State -->
+                <div class="selection-empty" id="emptyView">
+                    <span class="empty-icon">🎯</span>
+                    <span class="empty-text">No units selected</span>
+                    <span class="empty-hint">Click or drag to select</span>
+                </div>
+
+                <!-- Single Unit View -->
+                <div class="selection-view hidden" id="singleView">
+                    <div class="entity-portrait">
+                        <span class="portrait-icon" id="entityIcon">🚀</span>
+                        <div class="entity-health-bar">
+                            <div class="health-fill" id="entityHealthFill"></div>
+                        </div>
+                    </div>
+                    <div class="entity-info">
+                        <div class="entity-name" id="entityName">Unit Name</div>
+                        <div class="entity-type" id="entityType">Type</div>
+                        <div class="entity-stats" id="entityStats"></div>
                     </div>
                 </div>
-                <div class="entity-info">
-                    <div class="entity-name" id="entityName">Unit Name</div>
-                    <div class="entity-type" id="entityType">Type</div>
-                    <div class="entity-stats" id="entityStats"></div>
-                </div>
-            </div>
 
-            <!-- Multi-Unit View -->
-            <div class="selection-view hidden" id="multiView">
-                <div class="multi-header">
-                    <span id="multiCount">0</span> units selected
+                <!-- Multi-Unit View -->
+                <div class="selection-view hidden" id="multiView">
+                    <div class="multi-grid" id="multiGrid"></div>
                 </div>
-                <div class="multi-grid" id="multiGrid"></div>
-            </div>
 
-            <!-- Production Queue View -->
-            <div class="production-view hidden" id="productionView">
-                <div class="production-header">Production Queue</div>
-                <div class="production-current" id="productionCurrent">
-                    <div class="production-icon" id="prodIcon">-</div>
-                    <div class="production-progress">
-                        <div class="progress-fill" id="prodProgressFill"></div>
+                <!-- Production Queue View -->
+                <div class="production-view hidden" id="productionView">
+                    <div class="production-header">Queue</div>
+                    <div class="production-current" id="productionCurrent">
+                        <div class="production-icon" id="prodIcon">-</div>
+                        <div class="production-progress">
+                            <div class="progress-fill" id="prodProgressFill"></div>
+                        </div>
+                        <span class="production-name" id="prodName">None</span>
                     </div>
-                    <span class="production-name" id="prodName">None</span>
+                    <div class="production-queue" id="productionQueue"></div>
                 </div>
-                <div class="production-queue" id="productionQueue"></div>
             </div>
         `;
 
         this.injectStyles();
-        document.getElementById('hud').appendChild(this.container);
+
+        // Append to parent section
+        if (this.parentSection) {
+            this.parentSection.appendChild(this.container);
+        }
 
         // Cache references
+        this.emptyView = document.getElementById('emptyView');
         this.singleView = document.getElementById('singleView');
         this.multiView = document.getElementById('multiView');
         this.productionView = document.getElementById('productionView');
+        this.selectionCount = document.getElementById('selectionCount');
     }
 
     injectStyles() {
+        if (document.getElementById('selectionPanelStyles')) return;
+
         const style = document.createElement('style');
+        style.id = 'selectionPanelStyles';
         style.textContent = `
             #selectionPanel {
-                position: absolute;
-                bottom: 10px;
-                left: 270px;
-                width: 280px;
-                height: 90px;
-                background: rgba(5, 15, 30, 0.95);
-                border: 2px solid #0af;
-                border-radius: 5px;
+                display: flex;
+                flex-direction: column;
+                height: 100%;
                 font-family: 'Exo 2', sans-serif;
-                box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
-                display: none;
-                overflow: hidden;
             }
 
-            #selectionPanel.visible {
-                display: block;
+            #selectionPanel .section-header {
+                padding: 4px 8px;
+                background: rgba(0, 100, 200, 0.2);
+                border-bottom: 1px solid #068;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .selection-title {
+                font-family: 'Orbitron', sans-serif;
+                font-size: 10px;
+                color: #0af;
+                letter-spacing: 1px;
+            }
+
+            .selection-count {
+                font-size: 10px;
+                color: #8cf;
+            }
+
+            .selection-content {
+                flex: 1;
+                overflow: hidden;
+                position: relative;
+            }
+
+            /* Empty State */
+            .selection-empty {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                color: #456;
+                text-align: center;
+            }
+
+            .selection-empty.hidden {
+                display: none;
+            }
+
+            .empty-icon {
+                font-size: 28px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+            }
+
+            .empty-text {
+                font-size: 11px;
+                color: #567;
+                margin-bottom: 4px;
+            }
+
+            .empty-hint {
+                font-size: 9px;
+                color: #345;
             }
 
             .selection-view {
@@ -108,18 +178,17 @@ export class SelectionPanel {
             /* Single View - Horizontal */
             #singleView {
                 display: flex;
-                gap: 10px;
-                height: 100%;
-                align-items: center;
+                gap: 12px;
+                align-items: flex-start;
             }
 
             .entity-portrait {
-                width: 50px;
-                height: 50px;
-                min-width: 50px;
+                width: 64px;
+                height: 64px;
+                min-width: 64px;
                 background: rgba(0, 50, 100, 0.4);
                 border: 2px solid #068;
-                border-radius: 5px;
+                border-radius: 6px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -128,15 +197,15 @@ export class SelectionPanel {
             }
 
             .portrait-icon {
-                font-size: 24px;
+                font-size: 32px;
             }
 
             .entity-health-bar {
                 position: absolute;
-                bottom: 3px;
-                left: 3px;
-                right: 3px;
-                height: 4px;
+                bottom: 4px;
+                left: 4px;
+                right: 4px;
+                height: 5px;
                 background: rgba(0, 0, 0, 0.5);
                 border-radius: 2px;
                 overflow: hidden;
@@ -164,72 +233,69 @@ export class SelectionPanel {
 
             .entity-name {
                 font-family: 'Orbitron', sans-serif;
-                font-size: 11px;
+                font-size: 13px;
                 color: #0af;
-                margin-bottom: 2px;
+                margin-bottom: 3px;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
 
             .entity-type {
-                font-size: 9px;
+                font-size: 10px;
                 color: #68a;
                 text-transform: uppercase;
                 letter-spacing: 1px;
-                margin-bottom: 4px;
+                margin-bottom: 6px;
             }
 
             .entity-stats {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 6px;
-                font-size: 9px;
+                gap: 8px;
+                font-size: 10px;
             }
 
             .stat-item {
                 display: flex;
                 align-items: center;
-                gap: 2px;
+                gap: 3px;
             }
 
             .stat-icon {
-                font-size: 10px;
+                font-size: 11px;
             }
 
             .stat-value {
                 color: #8cf;
             }
 
-            /* Multi View - Horizontal */
-            .multi-header {
-                font-family: 'Orbitron', sans-serif;
-                font-size: 10px;
-                color: #0af;
-                margin-bottom: 5px;
+            /* Multi View */
+            #multiView {
+                padding: 8px;
             }
 
             .multi-grid {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 3px;
-                max-height: 55px;
+                gap: 4px;
+                max-height: 140px;
                 overflow-y: auto;
             }
 
             .multi-unit {
-                width: 26px;
-                height: 26px;
+                width: 32px;
+                height: 32px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
-                border-radius: 3px;
+                border-radius: 4px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
                 position: relative;
-                font-size: 14px;
+                font-size: 16px;
             }
 
             .multi-unit:hover {
@@ -239,9 +305,9 @@ export class SelectionPanel {
 
             .multi-unit-health {
                 position: absolute;
-                bottom: 1px;
-                left: 1px;
-                right: 1px;
+                bottom: 2px;
+                left: 2px;
+                right: 2px;
                 height: 2px;
                 background: rgba(0, 0, 0, 0.5);
                 border-radius: 1px;
@@ -253,44 +319,52 @@ export class SelectionPanel {
                 border-radius: 1px;
             }
 
-            /* Production View - Compact */
+            /* Production View */
             .production-view {
-                padding: 5px 8px;
-                border-top: 1px solid #068;
                 position: absolute;
                 bottom: 0;
                 left: 0;
                 right: 0;
+                padding: 6px 8px;
+                border-top: 1px solid #068;
                 background: rgba(5, 15, 30, 0.95);
             }
 
-            .production-header {
+            .production-view.hidden {
                 display: none;
+            }
+
+            .production-header {
+                font-size: 9px;
+                color: #68a;
+                margin-bottom: 4px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
             }
 
             .production-current {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 8px;
             }
 
             .production-icon {
-                width: 22px;
-                height: 22px;
+                width: 28px;
+                height: 28px;
                 background: rgba(0, 50, 100, 0.4);
                 border: 1px solid #068;
-                border-radius: 3px;
+                border-radius: 4px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 12px;
+                font-size: 14px;
             }
 
             .production-progress {
                 flex: 1;
-                height: 6px;
+                height: 8px;
                 background: rgba(0, 0, 0, 0.5);
-                border-radius: 3px;
+                border-radius: 4px;
                 overflow: hidden;
             }
 
@@ -302,8 +376,8 @@ export class SelectionPanel {
             }
 
             .production-name {
-                width: 60px;
-                font-size: 9px;
+                width: 80px;
+                font-size: 10px;
                 color: #8ab;
                 white-space: nowrap;
                 overflow: hidden;
@@ -312,20 +386,21 @@ export class SelectionPanel {
 
             .production-queue {
                 display: flex;
-                gap: 3px;
-                margin-left: 5px;
+                gap: 4px;
+                margin-left: 36px;
+                margin-top: 4px;
             }
 
             .queue-item {
-                width: 20px;
-                height: 20px;
+                width: 24px;
+                height: 24px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
-                border-radius: 2px;
+                border-radius: 3px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 10px;
+                font-size: 12px;
                 cursor: pointer;
             }
 
@@ -336,7 +411,7 @@ export class SelectionPanel {
 
             /* Scrollbar */
             .multi-grid::-webkit-scrollbar {
-                width: 3px;
+                width: 4px;
             }
 
             .multi-grid::-webkit-scrollbar-thumb {
@@ -358,24 +433,21 @@ export class SelectionPanel {
 
     onSelectionChanged(selection) {
         this.selectedEntities = selection || [];
-
-        if (this.selectedEntities.length === 0) {
-            this.hide();
-            return;
-        }
-
-        this.show();
         this.updateDisplay();
     }
 
     updateDisplay() {
-        if (this.selectedEntities.length === 0) return;
-
         // Filter out dead entities
         this.selectedEntities = this.selectedEntities.filter(e => !e.dead);
 
+        // Update count
+        if (this.selectionCount) {
+            this.selectionCount.textContent = this.selectedEntities.length > 0 ?
+                `(${this.selectedEntities.length})` : '';
+        }
+
         if (this.selectedEntities.length === 0) {
-            this.hide();
+            this.showEmptyState();
             return;
         }
 
@@ -386,9 +458,17 @@ export class SelectionPanel {
         }
     }
 
+    showEmptyState() {
+        this.emptyView.classList.remove('hidden');
+        this.singleView.classList.add('hidden');
+        this.multiView.classList.add('hidden');
+        this.productionView.classList.add('hidden');
+    }
+
     showSingleView(entity) {
         if (!entity) return;
 
+        this.emptyView.classList.add('hidden');
         this.singleView.classList.remove('hidden');
         this.multiView.classList.add('hidden');
 
@@ -445,12 +525,10 @@ export class SelectionPanel {
     }
 
     showMultiView(entities) {
+        this.emptyView.classList.add('hidden');
         this.singleView.classList.add('hidden');
         this.multiView.classList.remove('hidden');
         this.productionView.classList.add('hidden');
-
-        // Update count
-        document.getElementById('multiCount').textContent = entities.length;
 
         // Build grid
         const grid = document.getElementById('multiGrid');
@@ -678,19 +756,27 @@ export class SelectionPanel {
         return stats.join('');
     }
 
+    // ===== Visibility (Deprecated - always visible now) =====
+
     show() {
-        this.container.classList.add('visible');
+        // No-op: Always visible in MainPanel
     }
 
     hide() {
-        this.container.classList.remove('visible');
+        // No-op: Always visible in MainPanel
     }
 
     dispose() {
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
         }
-        this.container.remove();
+        if (this.container) {
+            this.container.remove();
+        }
+        const style = document.getElementById('selectionPanelStyles');
+        if (style) {
+            style.remove();
+        }
     }
 }
 
