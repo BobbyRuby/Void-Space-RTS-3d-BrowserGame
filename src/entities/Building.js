@@ -35,6 +35,10 @@ export class Building extends Entity {
         this.buildProgress = 0;
         this.rallyPoint = null;
 
+        // Rally point visual markers (created by InputManager)
+        this.rallyMarker = null;
+        this.rallyLine = null;
+
         // Refinery specific
         this.storedOre = 0;
         this.storedCrystals = 0;
@@ -727,6 +731,16 @@ export class Building extends Entity {
 
         if (killer) {
             gameState.recordKill(killer.team);
+        }
+
+        // Clean up rally point visuals
+        if (this.rallyMarker) {
+            this.rallyMarker.dispose();
+            this.rallyMarker = null;
+        }
+        if (this.rallyLine) {
+            this.rallyLine.dispose();
+            this.rallyLine = null;
         }
 
         eventBus.emit(GameEvents.BUILDING_DESTROYED, {

@@ -8,6 +8,8 @@ import { eventBus, GameEvents } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
 import { selectionSystem } from '../systems/SelectionSystem.js';
 import { sceneManager } from '../rendering/SceneManager.js';
+import { buildMenu } from '../ui/BuildMenu.js';
+import { commandPanel } from '../ui/CommandPanel.js';
 
 export class InputManager {
     constructor() {
@@ -89,10 +91,20 @@ export class InputManager {
     }
 
     handleHotkey(e) {
-        // Number keys - control groups
+        // Number keys - control groups (unless build menu is open)
         if (e.code >= 'Digit0' && e.code <= 'Digit9') {
-            const num = parseInt(e.code.replace('Digit', ''));
+            // If build menu is open, route number keys to it
+            if (buildMenu.isVisible()) {
+                // Number keys 1-7 select buildings in build menu
+                const num = parseInt(e.code.replace('Digit', ''));
+                if (num >= 1 && num <= 7) {
+                    const hotkeys = ['q', 'w', 'e', 'r', 't', 'y', 'u'];
+                    buildMenu.handleHotkey(hotkeys[num - 1]);
+                    return;
+                }
+            }
 
+            const num = parseInt(e.code.replace('Digit', ''));
             if (e.ctrlKey) {
                 // Ctrl + Number: Set control group
                 selectionSystem.setControlGroup(num);
@@ -103,35 +115,61 @@ export class InputManager {
             return;
         }
 
-        // Command hotkeys
+        // Route hotkeys to BuildMenu when it's visible
+        if (buildMenu.isVisible()) {
+            if (buildMenu.handleHotkey(e.key)) {
+                return;
+            }
+        }
+
+        // Route hotkeys to CommandPanel when it's visible
+        if (commandPanel.isVisible()) {
+            if (commandPanel.handleHotkey(e.key)) {
+                return;
+            }
+        }
+
+        // Command hotkeys (when CommandPanel is not visible but units are selected)
         switch (e.code) {
             case 'KeyX':
                 // Stop (X key - S is used for camera movement)
-                selectionSystem.commandStop();
+                if (selectionSystem.hasSelection()) {
+                    selectionSystem.commandStop();
+                    eventBus.emit(GameEvents.COMMAND_COMPLETE, {});
+                }
                 break;
 
             case 'KeyH':
                 // Hold position
-                selectionSystem.commandHold();
+                if (selectionSystem.hasSelection()) {
+                    selectionSystem.commandHold();
+                    eventBus.emit(GameEvents.COMMAND_COMPLETE, {});
+                }
                 break;
 
             case 'KeyG':
                 // Attack-move mode (G key - A is used for camera movement)
-                eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, {
-                    mode: 'attackMove'
-                });
+                if (selectionSystem.hasSelection()) {
+                    eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, {
+                        mode: 'attackMove'
+                    });
+                }
                 break;
 
             case 'KeyP':
                 // Patrol mode (requires click)
-                eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, {
-                    mode: 'patrol'
-                });
+                if (selectionSystem.hasSelection()) {
+                    eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, {
+                        mode: 'patrol'
+                    });
+                }
                 break;
 
             case 'Escape':
-                // Cancel build mode or deselect
-                if (gameState.buildMode) {
+                // Cancel build mode, close build menu, or deselect
+                if (buildMenu.isVisible()) {
+                    buildMenu.hide();
+                } else if (gameState.buildMode) {
                     eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
                 } else {
                     selectionSystem.clearSelection();
@@ -144,11 +182,9 @@ export class InputManager {
                 break;
         }
 
-        // Building hotkeys (B + key for build menu)
+        // Building hotkeys (B to toggle build menu)
         if (e.code === 'KeyB') {
-            eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, {
-                mode: 'buildMenu'
-            });
+            buildMenu.toggle();
         }
     }
 
@@ -259,6 +295,10 @@ export class InputManager {
         } else if (gameState.buildMode === 'patrol') {
             selectionSystem.commandPatrol(worldPos.x, worldPos.z);
             eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
+        } else if (gameState.buildMode === 'rallyPoint') {
+            // Set rally point for the building stored in gameState
+            this.setRallyPoint(worldPos);
+            eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
         } else if (gameState.buildMode === 'buildMenu') {
             // 'buildMenu' is not a placeable building - ignore click
             return;
@@ -270,6 +310,120 @@ export class InputManager {
                 team: TEAMS.PLAYER
             });
         }
+    }
+
+    setRallyPoint(worldPos) {
+        // Find the selected production building
+        const selectedBuilding = gameState.selectedEntities.find(e =>
+            e.isBuilding &&
+            !e.dead &&
+            !e.isConstructing &&
+            e.team === TEAMS.PLAYER &&
+            e.def?.canBuild?.length > 0
+        );
+
+        if (!selectedBuilding) return;
+
+        // Set the rally point
+        selectedBuilding.rallyPoint = { x: worldPos.x, z: worldPos.z };
+
+        // Create or update rally marker visual
+        this.createRallyMarker(selectedBuilding, worldPos);
+
+        // Emit event
+        eventBus.emit(GameEvents.RALLY_POINT_SET, {
+            building: selectedBuilding,
+            position: { x: worldPos.x, z: worldPos.z }
+        });
+
+        // Show feedback
+        eventBus.emit(GameEvents.UI_ALERT, {
+            message: 'Rally point set',
+            type: 'info',
+            team: TEAMS.PLAYER
+        });
+    }
+
+    createRallyMarker(building, worldPos) {
+        const scene = sceneManager.scene;
+        if (!scene) return;
+
+        // Remove existing marker if any
+        if (building.rallyMarker) {
+            building.rallyMarker.dispose();
+            building.rallyMarker = null;
+        }
+        if (building.rallyLine) {
+            building.rallyLine.dispose();
+            building.rallyLine = null;
+        }
+
+        // Create flag/beacon marker
+        const markerParent = new BABYLON.TransformNode('rallyMarker_' + building.id, scene);
+        markerParent.position = new BABYLON.Vector3(worldPos.x, 0, worldPos.z);
+
+        // Flag pole
+        const pole = BABYLON.MeshBuilder.CreateCylinder('pole', {
+            height: 10,
+            diameter: 0.3
+        }, scene);
+        pole.parent = markerParent;
+        pole.position.y = 5;
+
+        const poleMat = new BABYLON.StandardMaterial('poleMat', scene);
+        poleMat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+        poleMat.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        pole.material = poleMat;
+
+        // Flag
+        const flag = BABYLON.MeshBuilder.CreatePlane('flag', {
+            width: 4,
+            height: 3
+        }, scene);
+        flag.parent = markerParent;
+        flag.position.set(2, 8.5, 0);
+
+        const flagMat = new BABYLON.StandardMaterial('flagMat', scene);
+        flagMat.diffuseColor = new BABYLON.Color3(0, 0.8, 0.2);
+        flagMat.emissiveColor = new BABYLON.Color3(0, 0.4, 0.1);
+        flagMat.backFaceCulling = false;
+        flag.material = flagMat;
+
+        // Beacon glow at base
+        const beacon = BABYLON.MeshBuilder.CreateCylinder('beacon', {
+            height: 1,
+            diameter: 2
+        }, scene);
+        beacon.parent = markerParent;
+        beacon.position.y = 0.5;
+
+        const beaconMat = new BABYLON.StandardMaterial('beaconMat', scene);
+        beaconMat.emissiveColor = new BABYLON.Color3(0, 1, 0.5);
+        beaconMat.alpha = 0.6;
+        beacon.material = beaconMat;
+
+        building.rallyMarker = markerParent;
+
+        // Create line from building to rally point
+        const buildingPos = building.mesh.position;
+        const linePoints = [
+            new BABYLON.Vector3(buildingPos.x, 2, buildingPos.z),
+            new BABYLON.Vector3(worldPos.x, 2, worldPos.z)
+        ];
+
+        const line = BABYLON.MeshBuilder.CreateDashedLines('rallyLine', {
+            points: linePoints,
+            dashSize: 3,
+            gapSize: 2,
+            dashNb: 30
+        }, scene);
+
+        const lineMat = new BABYLON.StandardMaterial('lineMat', scene);
+        lineMat.emissiveColor = new BABYLON.Color3(0, 1, 0.5);
+        lineMat.disableLighting = true;
+        line.material = lineMat;
+
+        building.rallyLine = line;
     }
 
     onRightClick(e) {
