@@ -19,6 +19,14 @@ export class InputManager {
         this.mouseX = 0;
         this.mouseY = 0;
 
+        // Selection box element
+        this.selectionBox = null;
+
+        // Double-click detection
+        this.lastClickTime = 0;
+        this.lastClickEntity = null;
+        this.doubleClickThreshold = 300; // ms
+
         // Edge scrolling
         this.edgeScrollSpeed = 300;
         this.edgeScrollMargin = 20;
@@ -30,12 +38,16 @@ export class InputManager {
     init(canvas) {
         this.canvas = canvas;
 
+        // Get selection box element
+        this.selectionBox = document.getElementById('selectionBox');
+
         // Keyboard events
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
 
         // Mouse events
         canvas.addEventListener('click', (e) => this.onClick(e));
+        canvas.addEventListener('dblclick', (e) => this.onDoubleClick(e));
         canvas.addEventListener('contextmenu', (e) => this.onRightClick(e));
         canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
@@ -155,7 +167,15 @@ export class InputManager {
     // ===== Mouse Input =====
 
     onClick(e) {
-        if (this.isDragging) return;
+        // Check if we were box-selecting (drag > 5px)
+        if (this.dragStart) {
+            const dx = Math.abs(e.clientX - this.dragStart.x);
+            const dy = Math.abs(e.clientY - this.dragStart.y);
+            if (dx > 5 || dy > 5) {
+                // This was a box select, not a click
+                return;
+            }
+        }
 
         const entity = sceneManager.pickEntity(e.clientX, e.clientY, gameState.entities);
         const worldPos = sceneManager.getWorldPosition(e.clientX, e.clientY);
@@ -175,6 +195,61 @@ export class InputManager {
             screenX: e.clientX,
             screenY: e.clientY
         });
+    }
+
+    onDoubleClick(e) {
+        const entity = sceneManager.pickEntity(e.clientX, e.clientY, gameState.entities);
+
+        if (entity && entity.team === TEAMS.PLAYER && entity.isUnit) {
+            // Select all units of the same type on screen
+            this.selectAllOfType(entity.type);
+        }
+    }
+
+    selectAllOfType(unitType) {
+        selectionSystem.clearSelection();
+
+        // Get visible units of the same type
+        for (const entity of gameState.entities) {
+            if (entity.dead || entity.team !== TEAMS.PLAYER) continue;
+            if (!entity.isUnit || entity.type !== unitType) continue;
+
+            // Check if unit is visible on screen
+            if (entity.mesh && this.isOnScreen(entity.mesh.position)) {
+                gameState.select(entity);
+            }
+        }
+
+        eventBus.emit(GameEvents.UI_SELECTION_CHANGED, {
+            selected: gameState.selectedEntities
+        });
+
+        eventBus.emit(GameEvents.UI_ALERT, {
+            message: `Selected all ${unitType}s`,
+            type: 'info',
+            team: TEAMS.PLAYER
+        });
+    }
+
+    isOnScreen(position) {
+        if (!position || !sceneManager.scene || !sceneManager.camera) return false;
+
+        const engine = sceneManager.engine;
+        const scene = sceneManager.scene;
+        const camera = sceneManager.camera;
+
+        // Project 3D position to screen coordinates
+        const screenPos = BABYLON.Vector3.Project(
+            position,
+            BABYLON.Matrix.Identity(),
+            scene.getTransformMatrix(),
+            camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
+        );
+
+        // Check if within screen bounds
+        return screenPos.x >= 0 && screenPos.x <= engine.getRenderWidth() &&
+               screenPos.y >= 0 && screenPos.y <= engine.getRenderHeight() &&
+               screenPos.z > 0 && screenPos.z < 1;
     }
 
     handleBuildModeClick(worldPos) {
@@ -265,6 +340,9 @@ export class InputManager {
             this.isDragging = false;
             this.dragEnd = { x: e.clientX, y: e.clientY };
 
+            // Hide selection box
+            this.hideSelectionBox();
+
             // Only trigger box select if dragged more than a few pixels
             const dx = Math.abs(this.dragEnd.x - this.dragStart.x);
             const dy = Math.abs(this.dragEnd.y - this.dragStart.y);
@@ -283,6 +361,9 @@ export class InputManager {
                     });
                 }
             }
+
+            // Clear drag start after processing
+            this.dragStart = null;
         }
     }
 
@@ -290,8 +371,39 @@ export class InputManager {
         this.mouseX = e.clientX;
         this.mouseY = e.clientY;
 
-        if (this.isDragging) {
+        if (this.isDragging && this.dragStart) {
             this.dragEnd = { x: e.clientX, y: e.clientY };
+
+            // Update selection box visual
+            const dx = Math.abs(this.dragEnd.x - this.dragStart.x);
+            const dy = Math.abs(this.dragEnd.y - this.dragStart.y);
+
+            if (dx > 5 || dy > 5) {
+                this.updateSelectionBox();
+            }
+        }
+    }
+
+    // ===== Selection Box Visual =====
+
+    updateSelectionBox() {
+        if (!this.selectionBox || !this.dragStart || !this.dragEnd) return;
+
+        const left = Math.min(this.dragStart.x, this.dragEnd.x);
+        const top = Math.min(this.dragStart.y, this.dragEnd.y);
+        const width = Math.abs(this.dragEnd.x - this.dragStart.x);
+        const height = Math.abs(this.dragEnd.y - this.dragStart.y);
+
+        this.selectionBox.style.left = left + 'px';
+        this.selectionBox.style.top = top + 'px';
+        this.selectionBox.style.width = width + 'px';
+        this.selectionBox.style.height = height + 'px';
+        this.selectionBox.style.display = 'block';
+    }
+
+    hideSelectionBox() {
+        if (this.selectionBox) {
+            this.selectionBox.style.display = 'none';
         }
     }
 
