@@ -208,6 +208,35 @@ export class SelectionSystem {
         }
     }
 
+    commandGuard(target) {
+        const units = this.getSelectedUnits();
+        for (const unit of units) {
+            unit.guardTarget = target;
+            unit.command = 'guard';
+            // Move to guard position
+            if (target.mesh) {
+                unit.moveTo(target.mesh.position.x, target.mesh.position.z);
+            } else if (target.x !== undefined) {
+                unit.moveTo(target.x, target.z);
+            }
+        }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'guard' });
+        }
+    }
+
+    commandGuardPosition(x, z) {
+        const units = this.getSelectedUnits();
+        for (const unit of units) {
+            unit.guardTarget = { x, z };
+            unit.command = 'guard';
+            unit.moveTo(x, z);
+        }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'guard' });
+        }
+    }
+
     commandHarvest(oreNode) {
         const harvesters = this.getSelectedHarvesters();
         for (const harvester of harvesters) {

@@ -284,6 +284,19 @@ export class InputManager {
         } else if (gameState.buildMode === 'patrol') {
             selectionSystem.commandPatrol(worldPos.x, worldPos.z);
             eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
+        } else if (gameState.buildMode === 'guard') {
+            selectionSystem.commandGuardPosition(worldPos.x, worldPos.z);
+            eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
+        } else if (gameState.buildMode === 'harvest') {
+            // Find ore node at click position
+            const oreNode = gameState.oreNodes?.find(node =>
+                node && !node.depleted &&
+                Math.hypot(node.x - worldPos.x, node.z - worldPos.z) < 15
+            );
+            if (oreNode) {
+                selectionSystem.commandHarvest(oreNode);
+            }
+            eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
         } else if (gameState.buildMode === 'rallyPoint') {
             // Set rally point for the building stored in gameState
             this.setRallyPoint(worldPos);
