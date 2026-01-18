@@ -22,9 +22,11 @@ import { pathfinding } from '../systems/Pathfinding.js';
 import { formationSystem } from '../systems/FormationSystem.js';
 import { inputManager } from '../input/InputManager.js';
 import { minimap } from '../ui/Minimap.js';
+import { mainPanel } from '../ui/MainPanel.js';
 import { buildMenu } from '../ui/BuildMenu.js';
 import { selectionPanel } from '../ui/SelectionPanel.js';
 import { commandPanel } from '../ui/CommandPanel.js';
+import { rallyPointSection } from '../ui/RallyPointSection.js';
 import { settingsPanel } from '../ui/SettingsPanel.js';
 import { soundManager } from '../audio/SoundManager.js';
 import { saveSystem } from '../persistence/SaveSystem.js';
@@ -83,10 +85,20 @@ export class Game {
 
         // Initialize UI
         this.updateLoadingProgress(65, 'Creating UI...');
+
+        // Initialize minimap first (before MainPanel moves it)
         minimap.init(minimapCanvas);
-        buildMenu.init();
-        selectionPanel.init();
-        commandPanel.init();
+
+        // Initialize MainPanel (unified C&C style bottom panel)
+        mainPanel.init();
+
+        // Initialize UI sections with their parent sections from MainPanel
+        buildMenu.init(mainPanel.getBuildSection());
+        selectionPanel.init(mainPanel.getSelectionSection());
+        commandPanel.init(mainPanel.getCommandSection());
+        rallyPointSection.init(mainPanel.getRallySection());
+
+        // Settings panel (modal, not part of MainPanel)
         settingsPanel.init();
 
         // Initialize persistence
@@ -475,12 +487,13 @@ export class Game {
     }
 
     registerHotkeys() {
-        // Build menu toggle
+        // Build menu toggle (legacy - now always visible in MainPanel)
         eventBus.on(GameEvents.HOTKEY_BUILD_MENU, () => {
-            buildMenu.toggle();
+            // Build menu is now always visible, switch to buildings tab instead
+            buildMenu.switchTab('buildings');
         });
 
-        // Quick save/load (F5/F9), Build menu (B), Settings (F10/Escape)
+        // Quick save/load (F5/F9), Settings (F10/Escape), Rally hotkey (Y)
         window.addEventListener('keydown', (e) => {
             if (e.key === 'F5') {
                 e.preventDefault();
@@ -496,15 +509,18 @@ export class Game {
                 e.stopPropagation();
                 console.log('Settings hotkey pressed:', e.key);
                 settingsPanel.toggle();
-            } else if (e.key === 'b' || e.key === 'B') {
-                // Don't toggle build menu if settings panel is open
+            } else if (e.key === 'y' || e.key === 'Y') {
+                // Rally point hotkey
                 if (!settingsPanel.isVisible) {
-                    buildMenu.toggle();
+                    rallyPointSection.handleHotkey(e.key);
                 }
             } else if (e.key === 'Escape') {
                 // Close settings panel with Escape
                 if (settingsPanel.isVisible) {
                     settingsPanel.hide();
+                } else if (gameState.buildMode) {
+                    // Cancel build/rally mode
+                    eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
                 }
             }
         });
@@ -659,6 +675,8 @@ export class Game {
         buildMenu.dispose();
         selectionPanel.dispose();
         commandPanel.dispose();
+        rallyPointSection.dispose();
+        mainPanel.dispose();
         settingsPanel.dispose();
         soundManager.dispose();
         saveSystem.dispose();
