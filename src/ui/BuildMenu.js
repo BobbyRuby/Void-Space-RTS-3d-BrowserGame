@@ -38,17 +38,7 @@ export class BuildMenu {
         this.availableBuildings = [];
         this.availableUnits = [];
 
-        // Hotkeys
-        this.buildingHotkeys = {
-            'q': 'powerPlant',
-            'w': 'refinery',
-            'e': 'supplyDepot',
-            'r': 'shipyard',
-            't': 'advancedShipyard',
-            'y': 'turret',
-            'u': 'radar'
-        };
-
+        // Unit hotkeys only (no building hotkeys)
         this.unitHotkeys = {
             'q': 'harvester',
             'w': 'scout',
@@ -335,14 +325,14 @@ export class BuildMenu {
         this.buildingList.innerHTML = '';
 
         const buildings = [
-            { type: 'powerPlant', icon: '⚡', name: 'Power Plant', desc: 'Generates energy for your base', hotkey: 'Q' },
-            { type: 'refinery', icon: '🏭', name: 'Refinery', desc: 'Processes ore and crystals', hotkey: 'W' },
-            { type: 'supplyDepot', icon: '📦', name: 'Supply Depot', desc: 'Increases unit capacity', hotkey: 'E' },
-            { type: 'shipyard', icon: '🚀', name: 'Shipyard', desc: 'Produces basic combat units', hotkey: 'R' },
-            { type: 'advancedShipyard', icon: '🛸', name: 'Adv. Shipyard', desc: 'Produces advanced warships', hotkey: 'T' },
-            { type: 'turret', icon: '🔫', name: 'Turret', desc: 'Defensive weapon platform', hotkey: 'Y' },
-            { type: 'radar', icon: '📡', name: 'Radar', desc: 'Reveals large area of map', hotkey: 'U' },
-            { type: 'forceFieldGenerator', icon: '🛡️', name: 'Force Field', desc: 'Creates barriers between generators', hotkey: 'I' }
+            { type: 'powerPlant', icon: '⚡', name: 'Power Plant', desc: 'Generates energy for your base' },
+            { type: 'refinery', icon: '🏭', name: 'Refinery', desc: 'Processes ore and crystals' },
+            { type: 'supplyDepot', icon: '📦', name: 'Supply Depot', desc: 'Increases unit capacity' },
+            { type: 'shipyard', icon: '🚀', name: 'Shipyard', desc: 'Produces basic combat units' },
+            { type: 'advancedShipyard', icon: '🛸', name: 'Adv. Shipyard', desc: 'Produces advanced warships' },
+            { type: 'turret', icon: '🔫', name: 'Turret', desc: 'Defensive weapon platform' },
+            { type: 'radar', icon: '📡', name: 'Radar', desc: 'Reveals large area of map' },
+            { type: 'forceFieldGenerator', icon: '🛡️', name: 'Force Field', desc: 'Creates barriers between generators' }
         ];
 
         for (const building of buildings) {
