@@ -8,7 +8,7 @@ class DebugLogger {
         this.logs = [];
         this.maxLogs = 5000;
         this.originalConsole = {};
-        this.serverLoggingEnabled = true;
+        this.serverLoggingEnabled = false; // Disabled - no server on static hosting
         this.logEndpoint = '/log';
 
         // Intercept console methods
