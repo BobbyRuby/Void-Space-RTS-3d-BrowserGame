@@ -40,8 +40,23 @@ export class InputManager {
     init(canvas) {
         this.canvas = canvas;
 
-        // Get selection box element
+        // Get selection box element (or create if missing)
         this.selectionBox = document.getElementById('selectionBox');
+        if (!this.selectionBox) {
+            this.selectionBox = document.createElement('div');
+            this.selectionBox.id = 'selectionBox';
+            this.selectionBox.style.cssText = `
+                position: absolute;
+                border: 2px solid #0af;
+                background: rgba(0, 170, 255, 0.15);
+                pointer-events: none;
+                display: none;
+                z-index: 50;
+                box-shadow: 0 0 10px rgba(0, 170, 255, 0.5), inset 0 0 20px rgba(0, 170, 255, 0.1);
+            `;
+            document.body.appendChild(this.selectionBox);
+            console.log('InputManager: Created selection box element');
+        }
 
         // Keyboard events
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
@@ -480,9 +495,16 @@ export class InputManager {
 
     onMouseDown(e) {
         if (e.button === 0) { // Left button
+            // Don't start drag if in build mode (placing buildings)
+            if (gameState.buildMode) {
+                console.log('MouseDown: in build mode, skipping drag');
+                return;
+            }
+
             this.isDragging = true;
             this.dragStart = { x: e.clientX, y: e.clientY };
             this.dragEnd = { x: e.clientX, y: e.clientY };
+            console.log('MouseDown: drag started at', e.clientX, e.clientY);
 
             eventBus.emit(GameEvents.INPUT_DRAG_START, {
                 screenX: e.clientX,
@@ -535,6 +557,7 @@ export class InputManager {
             const dy = Math.abs(this.dragEnd.y - this.dragStart.y);
 
             if (dx > 5 || dy > 5) {
+                console.log('MouseMove: updating selection box, dx:', dx, 'dy:', dy);
                 this.updateSelectionBox();
             }
         }
@@ -543,7 +566,11 @@ export class InputManager {
     // ===== Selection Box Visual =====
 
     updateSelectionBox() {
-        if (!this.selectionBox || !this.dragStart || !this.dragEnd) return;
+        if (!this.selectionBox) {
+            console.warn('Selection box element not found!');
+            return;
+        }
+        if (!this.dragStart || !this.dragEnd) return;
 
         const left = Math.min(this.dragStart.x, this.dragEnd.x);
         const top = Math.min(this.dragStart.y, this.dragEnd.y);

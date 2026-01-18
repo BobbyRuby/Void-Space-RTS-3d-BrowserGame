@@ -68,9 +68,9 @@ export class SelectionSystem {
             this.clearSelection();
         }
 
-        // Select all player entities in the box
+        // Select all player units in the box (not buildings)
         for (const entity of gameState.entities) {
-            if (entity.dead || entity.team !== TEAMS.PLAYER) continue;
+            if (entity.dead || entity.team !== TEAMS.PLAYER || !entity.isUnit) continue;
 
             const pos = entity.mesh?.position;
             if (!pos) continue;
