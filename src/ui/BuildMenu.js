@@ -357,7 +357,6 @@ export class BuildMenu {
             item.dataset.category = 'building';
 
             item.innerHTML = `
-                <span class="build-item-hotkey">${building.hotkey}</span>
                 <span class="build-item-icon">${building.icon}</span>
                 <span class="build-item-name">${building.name}</span>
                 <span class="build-item-cost ${!canBuild ? 'unaffordable' : ''}">$${cost.credits}</span>
@@ -408,7 +407,6 @@ export class BuildMenu {
             item.dataset.category = 'unit';
 
             item.innerHTML = `
-                <span class="build-item-hotkey">${unit.hotkey}</span>
                 <span class="build-item-icon">${unit.icon}</span>
                 <span class="build-item-name">${unit.name}</span>
                 <span class="build-item-cost ${!canBuild ? 'unaffordable' : ''}">$${cost.credits}</span>
@@ -578,37 +576,11 @@ export class BuildMenu {
     }
 
     // ===== Hotkey Handling =====
+    // Note: Letter hotkeys (QWERTYU) disabled to avoid conflict with camera controls (WASD, QE)
+    // Players use click to select build items - C&C style
 
     handleHotkey(key) {
-        const lowerKey = key.toLowerCase();
-
-        if (this.activeTab === 'buildings' && this.buildingHotkeys[lowerKey]) {
-            const type = this.buildingHotkeys[lowerKey];
-            const config = BUILDINGS[type];
-            if (config) {
-                const cost = normalizeCost(config.cost);
-                if (this.canAfford(cost) && this.meetsRequirements(config)) {
-                    this.startBuildingPlacement(type);
-                    return true;
-                }
-            }
-            return true; // Key was recognized even if action failed
-        } else if (this.activeTab === 'units' && this.unitHotkeys[lowerKey]) {
-            const type = this.unitHotkeys[lowerKey];
-            const config = UNITS[type];
-            if (config) {
-                const cost = normalizeCost(config.cost);
-                if (this.canAfford(cost) &&
-                    this.hasProductionBuilding(type) &&
-                    this.hasEnoughSupply(config.supply || 1)) {
-                    this.queueUnit(type);
-                    return true;
-                }
-            }
-            return true; // Key was recognized even if action failed
-        }
-
-        // Tab switching with number keys
+        // Tab switching with number keys only
         if (key === '1') {
             this.switchTab('buildings');
             return true;

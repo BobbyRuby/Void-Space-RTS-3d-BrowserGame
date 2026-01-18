@@ -91,20 +91,16 @@ export class InputManager {
     }
 
     handleHotkey(e) {
-        // Number keys - control groups (unless build menu is open)
+        // Number keys 1-2 for build menu tabs, 0-9 for control groups
         if (e.code >= 'Digit0' && e.code <= 'Digit9') {
-            // If build menu is open, route number keys to it
-            if (buildMenu.isVisible()) {
-                // Number keys 1-7 select buildings in build menu
-                const num = parseInt(e.code.replace('Digit', ''));
-                if (num >= 1 && num <= 7) {
-                    const hotkeys = ['q', 'w', 'e', 'r', 't', 'y', 'u'];
-                    buildMenu.handleHotkey(hotkeys[num - 1]);
-                    return;
-                }
+            const num = parseInt(e.code.replace('Digit', ''));
+
+            // 1 and 2 switch build menu tabs (if not using Ctrl for control groups)
+            if (!e.ctrlKey && (num === 1 || num === 2)) {
+                buildMenu.handleHotkey(String(num));
+                return;
             }
 
-            const num = parseInt(e.code.replace('Digit', ''));
             if (e.ctrlKey) {
                 // Ctrl + Number: Set control group
                 selectionSystem.setControlGroup(num);
@@ -113,13 +109,6 @@ export class InputManager {
                 selectionSystem.selectControlGroup(num, e.shiftKey);
             }
             return;
-        }
-
-        // Route hotkeys to BuildMenu when it's visible
-        if (buildMenu.isVisible()) {
-            if (buildMenu.handleHotkey(e.key)) {
-                return;
-            }
         }
 
         // Route hotkeys to CommandPanel when it's visible
