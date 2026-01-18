@@ -235,7 +235,23 @@ export const GameEvents = {
     HOTKEY_SETTINGS: 'hotkey:settings',
 
     // Pre-game lobby events
-    GAME_CONFIG_READY: 'game:config:ready'
+    GAME_CONFIG_READY: 'game:config:ready',
+
+    // Command events
+    COMMAND_COMPLETE: 'command:complete',
+
+    // Unit command events
+    UNIT_STOP: 'unit:stop',
+    UNIT_HOLD: 'unit:hold',
+    FORMATION_CHANGED: 'formation:changed',
+    HARVESTER_RETURN: 'harvester:return',
+    PRODUCTION_CANCEL: 'production:cancel',
+    RESOURCES_CHANGED: 'resources:changed',
+    BUILDING_COMPLETE: 'building:complete',
+
+    // Rally point events
+    RALLY_POINT_SET: 'rally:point:set',
+    RALLY_POINT_CLEAR: 'rally:point:clear'
 };
 
 // Create singleton instance
