@@ -110,13 +110,15 @@ export class BuildMenu {
                 position: absolute;
                 bottom: 10px;
                 left: 10px;
-                width: 320px;
+                width: 250px;
+                height: 90px;
                 background: rgba(5, 15, 30, 0.95);
                 border: 2px solid #0af;
                 border-radius: 5px;
                 font-family: 'Exo 2', sans-serif;
                 box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
                 display: none;
+                overflow: hidden;
             }
 
             #buildMenu.visible {
@@ -127,25 +129,25 @@ export class BuildMenu {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 10px 15px;
+                padding: 3px 8px;
                 border-bottom: 1px solid #0af;
                 background: rgba(0, 100, 200, 0.2);
             }
 
             .build-menu-title {
                 font-family: 'Orbitron', sans-serif;
-                font-size: 14px;
+                font-size: 9px;
                 color: #0af;
-                letter-spacing: 2px;
+                letter-spacing: 1px;
             }
 
             .build-menu-close {
                 background: none;
                 border: none;
                 color: #0af;
-                font-size: 20px;
+                font-size: 14px;
                 cursor: pointer;
-                padding: 0 5px;
+                padding: 0 3px;
             }
 
             .build-menu-close:hover {
@@ -154,17 +156,17 @@ export class BuildMenu {
 
             .build-menu-tabs {
                 display: flex;
-                border-bottom: 1px solid #0af;
+                border-bottom: 1px solid #068;
             }
 
             .build-tab {
                 flex: 1;
-                padding: 10px;
+                padding: 4px;
                 background: none;
                 border: none;
                 color: #68a;
                 font-family: 'Orbitron', sans-serif;
-                font-size: 12px;
+                font-size: 9px;
                 cursor: pointer;
                 transition: all 0.2s;
             }
@@ -181,15 +183,16 @@ export class BuildMenu {
             }
 
             .build-menu-content {
-                padding: 10px;
-                max-height: 300px;
-                overflow-y: auto;
+                padding: 4px;
+                max-height: 42px;
+                overflow-x: auto;
+                overflow-y: hidden;
             }
 
             .build-list {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 8px;
+                display: flex;
+                gap: 4px;
+                flex-wrap: nowrap;
             }
 
             .build-list.hidden {
@@ -197,24 +200,24 @@ export class BuildMenu {
             }
 
             .build-item {
-                width: 65px;
-                height: 65px;
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
-                border-radius: 5px;
+                border-radius: 3px;
                 cursor: pointer;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s;
+                transition: all 0.15s;
                 position: relative;
             }
 
             .build-item:hover {
                 background: rgba(0, 100, 200, 0.4);
                 border-color: #0af;
-                transform: scale(1.05);
             }
 
             .build-item.disabled {
@@ -223,78 +226,41 @@ export class BuildMenu {
             }
 
             .build-item.disabled:hover {
-                transform: none;
                 border-color: #068;
             }
 
             .build-item-icon {
-                font-size: 24px;
-                margin-bottom: 2px;
+                font-size: 18px;
             }
 
             .build-item-name {
-                font-size: 8px;
-                color: #aaa;
-                text-align: center;
-                text-transform: uppercase;
+                display: none;
             }
 
             .build-item-hotkey {
                 position: absolute;
-                top: 2px;
-                left: 4px;
-                font-size: 9px;
+                top: 1px;
+                left: 2px;
+                font-size: 7px;
                 color: #0af;
                 font-family: 'Orbitron', sans-serif;
             }
 
             .build-item-cost {
                 position: absolute;
-                bottom: 2px;
-                right: 4px;
-                font-size: 8px;
+                bottom: 1px;
+                right: 2px;
+                font-size: 6px;
                 color: #ffd700;
             }
 
             .build-menu-info {
-                padding: 10px 15px;
-                border-top: 1px solid #0af;
-                background: rgba(0, 50, 100, 0.2);
-            }
-
-            .info-name {
-                font-family: 'Orbitron', sans-serif;
-                font-size: 12px;
-                color: #0af;
-                margin-bottom: 5px;
-            }
-
-            .info-desc {
-                font-size: 11px;
-                color: #8ab;
-                margin-bottom: 8px;
-                min-height: 30px;
-            }
-
-            .info-cost {
-                display: flex;
-                gap: 15px;
-                font-size: 11px;
-            }
-
-            .cost-item {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-            }
-
-            .cost-item.insufficient {
-                color: #f44;
+                display: none;
             }
 
             /* Scrollbar styling */
             .build-menu-content::-webkit-scrollbar {
-                width: 6px;
+                height: 3px;
             }
 
             .build-menu-content::-webkit-scrollbar-track {
@@ -303,7 +269,7 @@ export class BuildMenu {
 
             .build-menu-content::-webkit-scrollbar-thumb {
                 background: #0af;
-                border-radius: 3px;
+                border-radius: 2px;
             }
         `;
         document.head.appendChild(style);

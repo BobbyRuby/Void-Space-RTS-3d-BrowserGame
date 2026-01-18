@@ -79,6 +79,9 @@ class AIPlayer {
         // Build units
         this.buildUnits(res, now);
 
+        // Command harvesters to gather resources
+        this.commandHarvesters(now);
+
         // Command military units
         this.commandMilitary(now);
     }
@@ -141,6 +144,50 @@ class AIPlayer {
             );
             if (harvesters.length < 3) {
                 cc.queueUnit('harvester');
+            }
+        }
+    }
+
+    commandHarvesters(now) {
+        // Get idle harvesters
+        const harvesters = this.getCached(
+            'myHarvesters',
+            e => !e.dead && e.team === this.team && e.type === 'harvester',
+            gameState.units,
+            now
+        );
+
+        for (const harvester of harvesters) {
+            // Skip if already has a task
+            if (harvester.harvestTarget || harvester.command === 'harvest' ||
+                harvester.command === 'returnCargo' || harvester.cargo > 0) {
+                continue;
+            }
+
+            // Find nearest ore node
+            const oreNodes = [...gameState.oreNodes, ...gameState.crystalNodes]
+                .filter(n => !n.depleted);
+
+            if (oreNodes.length === 0) continue;
+
+            let nearestNode = null;
+            let nearestDist = Infinity;
+
+            const pos = harvester.mesh?.position;
+            if (!pos) continue;
+
+            for (const node of oreNodes) {
+                const dx = node.x - pos.x;
+                const dz = node.z - pos.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestNode = node;
+                }
+            }
+
+            if (nearestNode) {
+                harvester.harvest(nearestNode);
             }
         }
     }

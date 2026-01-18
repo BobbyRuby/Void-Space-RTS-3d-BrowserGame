@@ -80,14 +80,16 @@ export class SelectionPanel {
             #selectionPanel {
                 position: absolute;
                 bottom: 10px;
-                left: 340px;
-                width: 300px;
+                left: 270px;
+                width: 280px;
+                height: 90px;
                 background: rgba(5, 15, 30, 0.95);
                 border: 2px solid #0af;
                 border-radius: 5px;
                 font-family: 'Exo 2', sans-serif;
                 box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
                 display: none;
+                overflow: hidden;
             }
 
             #selectionPanel.visible {
@@ -95,22 +97,26 @@ export class SelectionPanel {
             }
 
             .selection-view {
-                padding: 15px;
+                padding: 8px;
+                height: 100%;
             }
 
             .selection-view.hidden {
                 display: none;
             }
 
-            /* Single View */
+            /* Single View - Horizontal */
             #singleView {
                 display: flex;
-                gap: 15px;
+                gap: 10px;
+                height: 100%;
+                align-items: center;
             }
 
             .entity-portrait {
-                width: 80px;
-                height: 80px;
+                width: 50px;
+                height: 50px;
+                min-width: 50px;
                 background: rgba(0, 50, 100, 0.4);
                 border: 2px solid #068;
                 border-radius: 5px;
@@ -122,17 +128,17 @@ export class SelectionPanel {
             }
 
             .portrait-icon {
-                font-size: 36px;
+                font-size: 24px;
             }
 
             .entity-health-bar {
                 position: absolute;
-                bottom: 5px;
-                left: 5px;
-                right: 5px;
-                height: 6px;
+                bottom: 3px;
+                left: 3px;
+                right: 3px;
+                height: 4px;
                 background: rgba(0, 0, 0, 0.5);
-                border-radius: 3px;
+                border-radius: 2px;
                 overflow: hidden;
             }
 
@@ -153,64 +159,67 @@ export class SelectionPanel {
 
             .entity-info {
                 flex: 1;
+                overflow: hidden;
             }
 
             .entity-name {
                 font-family: 'Orbitron', sans-serif;
-                font-size: 14px;
+                font-size: 11px;
                 color: #0af;
-                margin-bottom: 5px;
+                margin-bottom: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .entity-type {
-                font-size: 11px;
+                font-size: 9px;
                 color: #68a;
                 text-transform: uppercase;
                 letter-spacing: 1px;
-                margin-bottom: 10px;
+                margin-bottom: 4px;
             }
 
             .entity-stats {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 5px;
-                font-size: 11px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                font-size: 9px;
             }
 
             .stat-item {
                 display: flex;
                 align-items: center;
-                gap: 5px;
+                gap: 2px;
             }
 
             .stat-icon {
-                font-size: 12px;
+                font-size: 10px;
             }
 
             .stat-value {
                 color: #8cf;
             }
 
-            /* Multi View */
+            /* Multi View - Horizontal */
             .multi-header {
                 font-family: 'Orbitron', sans-serif;
-                font-size: 12px;
+                font-size: 10px;
                 color: #0af;
-                margin-bottom: 10px;
-                text-align: center;
+                margin-bottom: 5px;
             }
 
             .multi-grid {
-                display: grid;
-                grid-template-columns: repeat(6, 1fr);
-                gap: 5px;
-                max-height: 140px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 3px;
+                max-height: 55px;
                 overflow-y: auto;
             }
 
             .multi-unit {
-                width: 40px;
-                height: 40px;
+                width: 26px;
+                height: 26px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
                 border-radius: 3px;
@@ -220,7 +229,7 @@ export class SelectionPanel {
                 justify-content: center;
                 cursor: pointer;
                 position: relative;
-                font-size: 18px;
+                font-size: 14px;
             }
 
             .multi-unit:hover {
@@ -230,59 +239,58 @@ export class SelectionPanel {
 
             .multi-unit-health {
                 position: absolute;
-                bottom: 2px;
-                left: 2px;
-                right: 2px;
-                height: 3px;
+                bottom: 1px;
+                left: 1px;
+                right: 1px;
+                height: 2px;
                 background: rgba(0, 0, 0, 0.5);
-                border-radius: 2px;
+                border-radius: 1px;
             }
 
             .multi-unit-health-fill {
                 height: 100%;
                 background: #0f0;
-                border-radius: 2px;
+                border-radius: 1px;
             }
 
-            /* Production View */
+            /* Production View - Compact */
             .production-view {
-                padding: 10px 15px;
+                padding: 5px 8px;
                 border-top: 1px solid #068;
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(5, 15, 30, 0.95);
             }
 
             .production-header {
-                font-family: 'Orbitron', sans-serif;
-                font-size: 11px;
-                color: #68a;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                margin-bottom: 8px;
+                display: none;
             }
 
             .production-current {
                 display: flex;
                 align-items: center;
-                gap: 10px;
-                margin-bottom: 8px;
+                gap: 6px;
             }
 
             .production-icon {
-                width: 35px;
-                height: 35px;
+                width: 22px;
+                height: 22px;
                 background: rgba(0, 50, 100, 0.4);
                 border: 1px solid #068;
                 border-radius: 3px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 18px;
+                font-size: 12px;
             }
 
             .production-progress {
                 flex: 1;
-                height: 8px;
+                height: 6px;
                 background: rgba(0, 0, 0, 0.5);
-                border-radius: 4px;
+                border-radius: 3px;
                 overflow: hidden;
             }
 
@@ -294,26 +302,30 @@ export class SelectionPanel {
             }
 
             .production-name {
-                width: 80px;
-                font-size: 11px;
+                width: 60px;
+                font-size: 9px;
                 color: #8ab;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .production-queue {
                 display: flex;
-                gap: 5px;
+                gap: 3px;
+                margin-left: 5px;
             }
 
             .queue-item {
-                width: 30px;
-                height: 30px;
+                width: 20px;
+                height: 20px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
-                border-radius: 3px;
+                border-radius: 2px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 14px;
+                font-size: 10px;
                 cursor: pointer;
             }
 
@@ -324,12 +336,12 @@ export class SelectionPanel {
 
             /* Scrollbar */
             .multi-grid::-webkit-scrollbar {
-                width: 5px;
+                width: 3px;
             }
 
             .multi-grid::-webkit-scrollbar-thumb {
                 background: #0af;
-                border-radius: 3px;
+                border-radius: 2px;
             }
         `;
         document.head.appendChild(style);

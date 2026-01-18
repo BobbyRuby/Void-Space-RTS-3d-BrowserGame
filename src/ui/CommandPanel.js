@@ -151,14 +151,16 @@ export class CommandPanel {
             #commandPanel {
                 position: absolute;
                 bottom: 10px;
-                left: 650px;
+                left: 560px;
                 width: 200px;
+                height: 90px;
                 background: rgba(5, 15, 30, 0.95);
                 border: 2px solid #0af;
                 border-radius: 5px;
                 font-family: 'Exo 2', sans-serif;
                 box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
                 display: none;
+                overflow: hidden;
             }
 
             #commandPanel.visible {
@@ -169,37 +171,37 @@ export class CommandPanel {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 10px 12px;
+                padding: 4px 8px;
                 border-bottom: 1px solid #068;
                 background: rgba(0, 100, 200, 0.2);
             }
 
             .command-title {
                 font-family: 'Orbitron', sans-serif;
-                font-size: 11px;
+                font-size: 9px;
                 color: #0af;
-                letter-spacing: 2px;
+                letter-spacing: 1px;
             }
 
             .command-mode {
-                font-size: 10px;
+                font-size: 9px;
                 color: #ff0;
                 text-transform: uppercase;
             }
 
             .command-grid {
                 display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 6px;
-                padding: 10px;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 3px;
+                padding: 5px;
             }
 
             .command-btn {
-                width: 55px;
-                height: 55px;
+                width: 34px;
+                height: 34px;
                 background: rgba(0, 50, 100, 0.3);
                 border: 1px solid #068;
-                border-radius: 5px;
+                border-radius: 3px;
                 cursor: pointer;
                 display: flex;
                 flex-direction: column;
@@ -212,13 +214,12 @@ export class CommandPanel {
             .command-btn:hover:not(.disabled) {
                 background: rgba(0, 100, 200, 0.4);
                 border-color: #0af;
-                transform: scale(1.05);
             }
 
             .command-btn.active {
                 background: rgba(0, 150, 255, 0.4);
                 border-color: #0af;
-                box-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+                box-shadow: 0 0 8px rgba(0, 150, 255, 0.5);
             }
 
             .command-btn.disabled {
@@ -227,29 +228,26 @@ export class CommandPanel {
             }
 
             .command-icon {
-                font-size: 22px;
-                margin-bottom: 2px;
+                font-size: 16px;
             }
 
             .command-name {
-                font-size: 8px;
-                color: #8ab;
-                text-transform: uppercase;
+                display: none;
             }
 
             .command-hotkey {
                 position: absolute;
-                top: 2px;
-                right: 4px;
-                font-size: 9px;
+                top: 1px;
+                right: 2px;
+                font-size: 7px;
                 color: #0af;
                 font-family: 'Orbitron', sans-serif;
             }
 
             .formation-display {
-                padding: 8px 12px;
+                padding: 3px 8px;
                 border-top: 1px solid #068;
-                font-size: 10px;
+                font-size: 8px;
                 color: #68a;
                 text-align: center;
             }
