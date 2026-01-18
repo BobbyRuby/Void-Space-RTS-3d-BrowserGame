@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Void Supremacy 3D - Galactic Conquest</title>
+
+    <!-- Babylon.js -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://unpkg.com/earcut@2.2.4/dist/earcut.min.js"></script>
+
+    <!-- Enhanced models (optional) -->
+    <script src="../void-ships-enhanced.js?v=20260117" onerror="console.log('Enhanced ships not found - using default models')"></script>
+    <script src="../void-buildings-enhanced.js?v=20260117" onerror="console.log('Enhanced buildings not found - using default models')"></script>
+    <script src="../void-ore-enhanced.js?v=20260117" onerror="console.log('Enhanced ore not found - using default models')"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #000;
+            font-family: 'Exo 2', sans-serif;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #renderCanvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* HUD Overlay */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+        }
+
+        #hud > * { pointer-events: auto; }
+
+        /* Resource Bar */
+        #resourceBar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50px;
+            background: linear-gradient(180deg, rgba(10,20,40,0.95) 0%, rgba(5,15,30,0.9) 100%);
+            border-bottom: 2px solid #0af;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 30px;
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: 0 4px 20px rgba(0,150,255,0.3);
+        }
+
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .resource-icon {
+            font-size: 20px;
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+
+        .resource-value {
+            font-size: 16px;
+            font-weight: 700;
+            min-width: 60px;
+        }
+
+        .resource-label {
+            font-size: 10px;
+            color: #68a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #credits .resource-value { color: #ffd700; }
+        #ore .resource-value { color: #ff8844; }
+        #crystals .resource-value { color: #ff00ff; }
+        #energy .resource-value { color: #00ffff; }
+        #supply .resource-value { color: #88ff88; }
+
+        /* Minimap */
+        #minimapContainer {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 250px;
+            height: 250px;
+            background: rgba(5,10,20,0.9);
+            border: 2px solid #0af;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,150,255,0.4);
+        }
+
+        #minimapCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        #minimapLabel {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            color: #0af;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Alerts */
+        #alerts {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            pointer-events: none;
+        }
+
+        .alert {
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+            transition: opacity 0.3s;
+        }
+
+        .alert-info {
+            background: rgba(0,150,255,0.8);
+            border: 1px solid #0af;
+        }
+
+        .alert-success {
+            background: rgba(0,200,100,0.8);
+            border: 1px solid #0c8;
+        }
+
+        .alert-danger {
+            background: rgba(255,50,50,0.8);
+            border: 1px solid #f33;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #resultTitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 72px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-shadow: 0 0 30px currentColor;
+        }
+
+        .final-stats {
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .final-stats div {
+            margin: 10px 0;
+        }
+
+        .restart-btn {
+            padding: 15px 40px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            background: linear-gradient(180deg, #0af 0%, #068 100%);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0,150,255,0.8);
+        }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, #0a1525 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        #loadingScreen h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 900;
+            color: #0af;
+            text-shadow: 0 0 30px rgba(0,150,255,0.8);
+            margin-bottom: 40px;
+        }
+
+        .loading-bar {
+            width: 400px;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #0af, #08f);
+            transition: width 0.3s;
+        }
+
+        #loadingText {
+            margin-top: 20px;
+            color: #68a;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+
+    <div id="hud">
+        <!-- Resource Bar -->
+        <div id="resourceBar">
+            <div class="resource" id="credits">
+                <span class="resource-icon">💰</span>
+                <div>
+                    <div class="resource-value" id="creditsValue">1000</div>
+                    <div class="resource-label">Credits</div>
+                </div>
+            </div>
+            <div class="resource" id="ore">
+                <span class="resource-icon">🪨</span>
+                <div>
+                    <div class="resource-value" id="oreValue">0</div>
+                    <div class="resource-label">Ore</div>
+                </div>
+            </div>
+            <div class="resource" id="crystals">
+                <span class="resource-icon">💎</span>
+                <div>
+                    <div class="resource-value" id="crystalsValue">0</div>
+                    <div class="resource-label">Crystals</div>
+                </div>
+            </div>
+            <div class="resource" id="energy">
+                <span class="resource-icon">⚡</span>
+                <div>
+                    <div class="resource-value" id="energyValue">0/0</div>
+                    <div class="resource-label">Energy</div>
+                </div>
+            </div>
+            <div class="resource" id="supply">
+                <span class="resource-icon">👥</span>
+                <div>
+                    <div class="resource-value" id="supplyValue">0/0</div>
+                    <div class="resource-label">Supply</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div id="alerts"></div>
+
+        <!-- Minimap -->
+        <div id="minimapContainer">
+            <span id="minimapLabel">Tactical Map</span>
+            <canvas id="minimapCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen">
+        <h1 id="resultTitle">VICTORY!</h1>
+        <div class="final-stats">
+            <div>Units Built: <span id="finalBuilt">0</span></div>
+            <div>Units Lost: <span id="finalLost">0</span></div>
+            <div>Enemy Destroyed: <span id="finalKills">0</span></div>
+        </div>
+        <button class="restart-btn" onclick="location.reload()">PLAY AGAIN</button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen">
+        <h1>VOID SUPREMACY</h1>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
+        </div>
+        <div id="loadingText">Initializing...</div>
+    </div>
+
+    <!-- Game Bootstrap -->
+    <script type="module">
+        // Import debug logger FIRST to capture all errors
+        // Cache bust: v=20260117
+        import { debugLogger } from './core/DebugLogger.js?v=20260117';
+        import { game } from './core/Game.js?v=20260117';
+        import { preGameLobby } from './ui/PreGameLobby.js?v=20260117';
+
+        // Initialize and start the game with pre-game lobby
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Hide loading screen initially (lobby will show instead)
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
+
+            // Show pre-game lobby and wait for configuration
+            preGameLobby.init(async (config) => {
+                try {
+                    // Show loading screen during initialization
+                    if (loadingScreen) {
+                        loadingScreen.style.display = 'flex';
+                    }
+
+                    // Initialize game with lobby config
+                    await game.init('renderCanvas', 'minimapCanvas', config);
+                    game.start();
+                } catch (error) {
+                    console.error('Failed to initialize game:', error);
+                    document.getElementById('loadingText').textContent = 'Error: ' + error.message;
+                }
+            });
+        });
+
+        // Instructions
+        console.log('=== DEBUG MODE ===');
+        console.log('Press Ctrl+Shift+L to download debug logs');
+        console.log('Or type: downloadLogs() in console');
+    </script>
+</body>
+</html>

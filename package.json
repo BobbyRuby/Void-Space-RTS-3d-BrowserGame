@@ -1,0 +1,13 @@
+{
+  "name": "void-supremacy-3d",
+  "version": "1.0.0",
+  "description": "3D Real-Time Strategy Game built with Babylon.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "server": "node server.js"
+  },
+  "keywords": ["game", "rts", "3d", "babylon.js"],
+  "author": "",
+  "license": "MIT"
+}

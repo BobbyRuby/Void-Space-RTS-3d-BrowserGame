@@ -1,0 +1,3714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Void Supremacy 3D - Galactic Conquest</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://unpkg.com/earcut@2.2.4/dist/earcut.min.js"></script>
+    <script src="void-ships-enhanced.js?v=20260117" onerror="console.log('Enhanced ships not found - using default models')"></script>
+    <script src="void-buildings-enhanced.js?v=20260117" onerror="console.log('Enhanced buildings not found - using default models')"></script>
+    <script src="void-ore-enhanced.js?v=20260117" onerror="console.log('Enhanced ore not found - using default models')"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #000;
+            font-family: 'Exo 2', sans-serif;
+            overflow: hidden;
+            color: #fff;
+        }
+        
+        #renderCanvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        
+        /* HUD Overlay */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+        }
+        
+        #hud > * { pointer-events: auto; }
+        
+        /* Resource Bar */
+        #resourceBar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50px;
+            background: linear-gradient(180deg, rgba(10,20,40,0.95) 0%, rgba(5,15,30,0.9) 100%);
+            border-bottom: 2px solid #0af;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 30px;
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: 0 4px 20px rgba(0,150,255,0.3);
+        }
+        
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .resource-icon {
+            font-size: 20px;
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+        
+        .resource-value {
+            font-size: 16px;
+            font-weight: 700;
+            min-width: 60px;
+        }
+        
+        .resource-label {
+            font-size: 10px;
+            color: #68a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        #credits .resource-value { color: #ffd700; }
+        #ore .resource-value { color: #ff8844; }
+        #crystals .resource-value { color: #ff00ff; }
+        #energy .resource-value { color: #00ffff; }
+        #supply .resource-value { color: #88ff88; }
+        
+        /* Player indicator */
+        #playerInfo {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        /* Minimap */
+        #minimapContainer {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 250px;
+            height: 250px;
+            background: rgba(5,10,20,0.9);
+            border: 2px solid #0af;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,150,255,0.4);
+        }
+        
+        #minimapCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        #minimapLabel {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            color: #0af;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        /* Selection Panel */
+        #selectionPanel {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 350px;
+            background: rgba(5,10,20,0.9);
+            border: 2px solid #0af;
+            border-radius: 5px;
+            padding: 10px;
+            display: none;
+        }
+        
+        #selectionPanel.visible { display: block; }
+        
+        .selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #234;
+        }
+        
+        .selection-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: #0af;
+        }
+        
+        .selection-count {
+            font-size: 12px;
+            color: #68a;
+        }
+        
+        .health-bar-container {
+            background: #111;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .health-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0f0, #8f0);
+            transition: width 0.2s;
+        }
+        
+        .shield-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #08f, #0af);
+            transition: width 0.2s;
+        }
+        
+        .selection-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            font-size: 11px;
+        }
+        
+        .stat {
+            background: rgba(0,100,200,0.1);
+            padding: 5px;
+            border-radius: 3px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            color: #68a;
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+        
+        /* Command Panel */
+        #commandPanel {
+            position: absolute;
+            bottom: 10px;
+            left: 370px;
+            background: rgba(5,10,20,0.9);
+            border: 2px solid #0af;
+            border-radius: 5px;
+            padding: 10px;
+            display: none;
+        }
+        
+        #commandPanel.visible { display: block; }
+        
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            gap: 5px;
+        }
+        
+        .command-btn {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(180deg, #1a2a3a 0%, #0a1520 100%);
+            border: 1px solid #345;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .command-btn:hover {
+            background: linear-gradient(180deg, #2a4a5a 0%, #1a2530 100%);
+            border-color: #0af;
+            box-shadow: 0 0 10px rgba(0,150,255,0.5);
+        }
+        
+        .command-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .command-btn .hotkey {
+            font-size: 9px;
+            color: #68a;
+            margin-top: 2px;
+        }
+        
+        /* Build Menu */
+        #buildMenu {
+            position: absolute;
+            bottom: 80px;
+            left: 370px;
+            background: rgba(5,10,20,0.95);
+            border: 2px solid #f80;
+            border-radius: 5px;
+            padding: 15px;
+            display: none;
+        }
+        
+        #buildMenu.visible { display: block; }
+        
+        .build-category {
+            margin-bottom: 15px;
+        }
+        
+        .build-category-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            color: #f80;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .build-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 60px);
+            gap: 8px;
+        }
+        
+        .build-btn {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(180deg, #2a1a0a 0%, #1a0a00 100%);
+            border: 1px solid #543;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .build-btn:hover {
+            border-color: #f80;
+            box-shadow: 0 0 15px rgba(255,130,0,0.5);
+        }
+        
+        .build-btn .icon { font-size: 22px; }
+        .build-btn .cost { font-size: 10px; color: #ffd700; margin-top: 2px; }
+        
+        .build-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        /* Alerts */
+        #alertContainer {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .alert {
+            background: rgba(255,50,50,0.9);
+            border: 1px solid #f55;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 13px;
+            animation: alertSlide 0.3s ease-out;
+        }
+        
+        .alert.success { background: rgba(50,200,50,0.9); border-color: #5f5; }
+        .alert.info { background: rgba(50,150,255,0.9); border-color: #5af; }
+        .alert.warning { background: rgba(255,180,0,0.9); border-color: #fa0; color: #000; }
+        
+        @keyframes alertSlide {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Game Over Screen */
+        .game-over-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .game-over-screen h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 72px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px currentColor;
+        }
+        
+        .game-over-screen.victory h1 { color: #0f0; }
+        .game-over-screen.defeat h1 { color: #f00; }
+        
+        .game-over-stats {
+            font-size: 18px;
+            line-height: 2;
+            margin-bottom: 30px;
+        }
+        
+        .restart-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            padding: 15px 40px;
+            background: linear-gradient(180deg, #0af 0%, #058 100%);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0,150,255,0.8);
+        }
+        
+        /* Tooltip */
+        #tooltip {
+            position: absolute;
+            background: rgba(5,10,20,0.95);
+            border: 1px solid #0af;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 12px;
+            max-width: 250px;
+            display: none;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        #tooltip .name {
+            font-family: 'Orbitron', sans-serif;
+            color: #0af;
+            margin-bottom: 5px;
+        }
+        
+        #tooltip .desc { color: #aaa; line-height: 1.4; }
+        
+        /* Loading Screen */
+        #loadingScreen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        #loadingScreen h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            color: #0af;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px #0af;
+        }
+        
+        .loading-bar {
+            width: 400px;
+            height: 8px;
+            background: #111;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #0af, #f0f);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        #loadingText {
+            margin-top: 15px;
+            color: #68a;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    
+    <div id="hud">
+        <div id="resourceBar">
+            <div class="resource" id="credits">
+                <span class="resource-icon">💰</span>
+                <div>
+                    <div class="resource-value">1000</div>
+                    <div class="resource-label">Credits</div>
+                </div>
+            </div>
+            <div class="resource" id="ore">
+                <span class="resource-icon">🪨</span>
+                <div>
+                    <div class="resource-value">0</div>
+                    <div class="resource-label">Ore</div>
+                </div>
+            </div>
+            <div class="resource" id="crystals">
+                <span class="resource-icon">💎</span>
+                <div>
+                    <div class="resource-value">0</div>
+                    <div class="resource-label">Crystals</div>
+                </div>
+            </div>
+            <div class="resource" id="energy">
+                <span class="resource-icon">⚡</span>
+                <div>
+                    <div class="resource-value">0/0</div>
+                    <div class="resource-label">Energy</div>
+                </div>
+            </div>
+            <div class="resource" id="supply">
+                <span class="resource-icon">👥</span>
+                <div>
+                    <div class="resource-value">0/10</div>
+                    <div class="resource-label">Supply</div>
+                </div>
+            </div>
+            <div id="playerInfo">
+                <span id="gameTime">00:00</span>
+                <div class="player-color" id="playerColor"></div>
+            </div>
+        </div>
+        
+        <div id="minimapContainer">
+            <canvas id="minimapCanvas"></canvas>
+            <div id="minimapLabel">Tactical</div>
+        </div>
+        
+        <div id="selectionPanel">
+            <div class="selection-header">
+                <span class="selection-name">Selected Unit</span>
+                <span class="selection-count">x1</span>
+            </div>
+            <div class="health-bar-container">
+                <div class="health-bar" style="width: 100%"></div>
+            </div>
+            <div class="health-bar-container">
+                <div class="shield-bar" style="width: 100%"></div>
+            </div>
+            <div class="selection-stats"></div>
+        </div>
+        
+        <div id="commandPanel">
+            <div class="command-grid" id="commandGrid"></div>
+        </div>
+        
+        <div id="buildMenu">
+            <div class="build-category" id="buildingCategory">
+                <div class="build-category-title">Structures</div>
+                <div class="build-grid" id="buildingGrid"></div>
+            </div>
+            <div class="build-category" id="unitCategory">
+                <div class="build-category-title">Units</div>
+                <div class="build-grid" id="unitGrid"></div>
+            </div>
+        </div>
+        
+        <div id="alertContainer"></div>
+        
+        <div id="tooltip">
+            <div class="name"></div>
+            <div class="desc"></div>
+        </div>
+    </div>
+    
+    <div class="game-over-screen" id="gameOverScreen">
+        <h1 id="gameOverTitle">VICTORY</h1>
+        <div class="game-over-stats">
+            <div>Time: <span id="finalTime">00:00</span></div>
+            <div>Units Built: <span id="finalUnits">0</span></div>
+            <div>Units Lost: <span id="finalLost">0</span></div>
+            <div>Enemy Destroyed: <span id="finalKills">0</span></div>
+        </div>
+        <button class="restart-btn" onclick="location.reload()">PLAY AGAIN</button>
+    </div>
+    
+    <div id="loadingScreen">
+        <h1>VOID SUPREMACY</h1>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
+        </div>
+        <div id="loadingText">Initializing...</div>
+    </div>
+    
+    <script>
+    // ============================================================
+    // VOID SUPREMACY 3D - GALACTIC CONQUEST EDITION
+    // Features: Ore Regrowth, Crystal Fields, Multi-Player, 
+    // Asteroid Belts, Neutral Aliens, Enhanced Minimap
+    // ============================================================
+
+    // ===== CONFIGURATION =====
+    const CONFIG = {
+        MAP_SIZE: 1200,              // Large map
+        NUM_PLAYERS: 4,              // Supports 2-8 players
+        NUM_AI_PLAYERS: 3,           // AI opponents
+        NUM_NEUTRAL_ALIENS: 2,       // Passive alien civs
+        
+        // Ore settings (C&C style)
+        ORE_FIELDS: 20,              // Number of ore patches
+        ORE_PER_FIELD_MIN: 3,
+        ORE_PER_FIELD_MAX: 8,
+        ORE_AMOUNT_MIN: 1500,
+        ORE_AMOUNT_MAX: 3000,
+        ORE_REGROW_RATE: 0.2,        // Units per second when depleted (90% reduction)
+        ORE_REGROW_DELAY: 30,        // Seconds before regrowth starts
+        ORE_SPREAD_CHANCE: 0.001,    // Chance to spread to adjacent
+        
+        // Crystal settings (rare, valuable)
+        CRYSTAL_FIELDS: 6,
+        CRYSTAL_AMOUNT_MIN: 500,
+        CRYSTAL_AMOUNT_MAX: 1000,
+        CRYSTAL_VALUE_MULTIPLIER: 5, // 5x value of ore
+        CRYSTAL_REGROW_RATE: 0.5,
+        
+        // Asteroid belt
+        ASTEROID_BELT_INNER: 400,
+        ASTEROID_BELT_OUTER: 550,
+        NUM_ASTEROIDS: 200,
+        
+        // Build range
+        BUILD_RANGE: 80
+    };
+
+    // ===== TEAM DEFINITIONS =====
+    const TEAMS = {
+        PLAYER: 0,
+        ENEMY_1: 1,
+        ENEMY_2: 2,
+        ENEMY_3: 3,
+        NEUTRAL: 4,        // Passive aliens
+        NEUTRAL_2: 5
+    };
+
+    const TEAM_COLORS = [
+        [0.2, 0.6, 1.0],   // Player - Blue
+        [1.0, 0.3, 0.2],   // Enemy 1 - Red
+        [0.2, 1.0, 0.3],   // Enemy 2 - Green
+        [1.0, 0.8, 0.2],   // Enemy 3 - Yellow
+        [0.8, 0.4, 1.0],   // Neutral 1 - Purple (Aliens)
+        [0.4, 1.0, 0.8]    // Neutral 2 - Cyan (Aliens)
+    ];
+
+    const TEAM_NAMES = ['You', 'Crimson Empire', 'Verdant Collective', 'Solar Dynasty', 'Ancient Ones', 'The Watchers'];
+
+    // ===== BUILDING DEFINITIONS =====
+    const BUILDINGS = {
+        commandCenter: {
+            name: 'Command Center',
+            icon: '🏛️',
+            size: 14,
+            maxHealth: 2500,
+            cost: 0,
+            energyProduction: 25,
+            energyDrain: 5,
+            supplyProvided: 15,
+            buildTime: 0,
+            canBuild: ['harvester', 'scout'],
+            color: [0.2, 0.6, 0.8]
+        },
+        powerPlant: {
+            name: 'Power Plant',
+            icon: '⚡',
+            size: 8,
+            maxHealth: 600,
+            cost: 150,
+            energyProduction: 35,
+            energyDrain: 0,
+            buildTime: 20,
+            color: [0.8, 0.8, 0.2]
+        },
+        refinery: {
+            name: 'Refinery',
+            icon: '🏭',
+            size: 10,
+            maxHealth: 1000,
+            cost: 200,
+            energyDrain: 8,
+            buildTime: 25,
+            processRate: 60,
+            color: [0.7, 0.4, 0.2]
+        },
+        shipyard: {
+            name: 'Shipyard',
+            icon: '🚀',
+            size: 14,
+            maxHealth: 1500,
+            cost: 350,
+            energyDrain: 5,
+            buildTime: 30,
+            canBuild: ['interceptor', 'striker', 'heavy', 'bomber', 'gunship'],
+            color: [0.3, 0.5, 0.7]
+        },
+        advancedShipyard: {
+            name: 'Advanced Shipyard',
+            icon: '🛸',
+            size: 18,
+            maxHealth: 2500,
+            cost: 900,
+            energyDrain: 10,
+            buildTime: 50,
+            canBuild: ['frigate', 'cruiser', 'battlecruiser', 'dreadnought'],
+            color: [0.5, 0.3, 0.7]
+        },
+        turret: {
+            name: 'Defense Turret',
+            icon: '🔫',
+            size: 5,
+            maxHealth: 500,
+            cost: 175,
+            energyDrain: 3,
+            buildTime: 15,
+            damage: 30,
+            range: 70,
+            fireRate: 400,
+            color: [0.6, 0.3, 0.3]
+        },
+        supplyDepot: {
+            name: 'Supply Depot',
+            icon: '📦',
+            size: 6,
+            maxHealth: 500,
+            cost: 100,
+            energyDrain: 0,
+            supplyProvided: 12,
+            buildTime: 15,
+            color: [0.4, 0.6, 0.4]
+        },
+        radar: {
+            name: 'Sensor Array',
+            icon: '📡',
+            size: 6,
+            maxHealth: 400,
+            cost: 200,
+            energyDrain: 5,
+            buildTime: 20,
+            sensorRange: 200,
+            color: [0.3, 0.7, 0.7]
+        }
+    };
+
+    // ===== UNIT DEFINITIONS =====
+    const UNITS = {
+        harvester: {
+            name: 'Harvester',
+            icon: '⛏️',
+            size: 4,
+            maxHealth: 200,
+            shield: 0,
+            speed: 20,
+            cost: 100,
+            supply: 1,
+            buildTime: 15,
+            harvestRate: 30,
+            cargoCapacity: 200,
+            color: [0.6, 0.5, 0.3]
+        },
+        scout: {
+            name: 'Scout',
+            icon: '◇',
+            size: 2,
+            maxHealth: 50,
+            shield: 30,
+            speed: 40,
+            cost: 50,
+            supply: 1,
+            buildTime: 8,
+            damage: 5,
+            range: 35,
+            fireRate: 180,
+            color: [0.6, 0.6, 1]
+        },
+        interceptor: {
+            name: 'Interceptor',
+            icon: '▷',
+            size: 2.5,
+            maxHealth: 80,
+            shield: 40,
+            speed: 35,
+            cost: 100,
+            supply: 1,
+            buildTime: 12,
+            damage: 12,
+            range: 40,
+            fireRate: 250,
+            color: [0.5, 0.8, 0.5]
+        },
+        striker: {
+            name: 'Strike Fighter',
+            icon: '▶',
+            size: 3,
+            maxHealth: 100,
+            shield: 50,
+            speed: 30,
+            cost: 150,
+            supply: 2,
+            buildTime: 15,
+            damage: 18,
+            range: 45,
+            fireRate: 300,
+            color: [0.8, 0.5, 0.3]
+        },
+        heavy: {
+            name: 'Heavy Fighter',
+            icon: '◆',
+            size: 4,
+            maxHealth: 180,
+            shield: 80,
+            speed: 22,
+            cost: 250,
+            supply: 3,
+            buildTime: 20,
+            damage: 25,
+            range: 50,
+            fireRate: 400,
+            color: [0.7, 0.3, 0.3]
+        },
+        bomber: {
+            name: 'Bomber',
+            icon: '◈',
+            size: 5,
+            maxHealth: 250,
+            shield: 50,
+            speed: 18,
+            cost: 300,
+            supply: 3,
+            buildTime: 25,
+            damage: 60,
+            range: 35,
+            fireRate: 1500,
+            splash: 15,
+            color: [0.5, 0.5, 0.7]
+        },
+        gunship: {
+            name: 'Gunship',
+            icon: '▣',
+            size: 5,
+            maxHealth: 300,
+            shield: 100,
+            speed: 20,
+            cost: 350,
+            supply: 4,
+            buildTime: 25,
+            damage: 20,
+            range: 55,
+            fireRate: 200,
+            color: [0.4, 0.6, 0.4]
+        },
+        frigate: {
+            name: 'Frigate',
+            icon: '▰',
+            size: 8,
+            maxHealth: 600,
+            shield: 200,
+            speed: 15,
+            cost: 500,
+            supply: 5,
+            buildTime: 35,
+            damage: 35,
+            range: 65,
+            fireRate: 500,
+            color: [0.3, 0.5, 0.6]
+        },
+        cruiser: {
+            name: 'Cruiser',
+            icon: '▮',
+            size: 12,
+            maxHealth: 1000,
+            shield: 400,
+            speed: 12,
+            cost: 800,
+            supply: 8,
+            buildTime: 45,
+            damage: 50,
+            range: 80,
+            fireRate: 600,
+            color: [0.5, 0.4, 0.6]
+        },
+        battlecruiser: {
+            name: 'Battlecruiser',
+            icon: '▬',
+            size: 16,
+            maxHealth: 1800,
+            shield: 600,
+            speed: 10,
+            cost: 1200,
+            supply: 12,
+            buildTime: 60,
+            damage: 80,
+            range: 90,
+            fireRate: 700,
+            color: [0.6, 0.3, 0.5]
+        },
+        dreadnought: {
+            name: 'Dreadnought',
+            icon: '█',
+            size: 22,
+            maxHealth: 3000,
+            shield: 1000,
+            speed: 7,
+            cost: 2000,
+            supply: 20,
+            buildTime: 90,
+            damage: 120,
+            range: 100,
+            fireRate: 800,
+            color: [0.4, 0.3, 0.5]
+        }
+    };
+
+    // ===== ALIEN UNITS (neutral, defensive) =====
+    const ALIEN_UNITS = {
+        guardian: {
+            name: 'Guardian',
+            icon: '⬡',
+            size: 6,
+            maxHealth: 400,
+            shield: 200,
+            speed: 15,
+            damage: 40,
+            range: 60,
+            fireRate: 500,
+            color: [0.8, 0.4, 1.0]
+        },
+        sentinel: {
+            name: 'Sentinel',
+            icon: '⬢',
+            size: 10,
+            maxHealth: 800,
+            shield: 400,
+            speed: 8,
+            damage: 60,
+            range: 80,
+            fireRate: 600,
+            color: [0.6, 0.2, 0.8]
+        }
+    };
+
+    // ===== GLOBAL STATE =====
+    let canvas, engine, scene, camera;
+    let minimapCanvas, minimapCtx;
+    let entities = [];
+    let oreNodes = [];
+    let crystalNodes = [];
+    let asteroids = [];
+    let projectiles = [];
+    let particles = [];
+    let selectedEntities = [];
+    let controlGroups = {};
+    
+    let gameState = {
+        running: true,
+        gameTime: 0,
+        playerTeam: TEAMS.PLAYER,
+        
+        resources: {},
+        stats: {},
+        
+        buildMode: null,
+        buildPreview: null,
+        
+        // Diplomacy - tracks who is hostile to whom
+        hostility: {}
+    };
+
+    // Initialize resources for all teams
+    for (let t = 0; t <= 5; t++) {
+        gameState.resources[t] = {
+            credits: t < 4 ? 1000 : 5000, // Aliens start with more
+            ore: 0,
+            crystals: 0,
+            energy: 0,
+            energyProduction: 0,
+            energyDrain: 0,
+            supply: 0,
+            maxSupply: t < 4 ? 15 : 50  // Aliens have more supply
+        };
+        gameState.stats[t] = {
+            unitsBuilt: 0,
+            unitsLost: 0,
+            enemyKilled: 0
+        };
+        gameState.hostility[t] = {};
+    }
+    
+    // Set initial hostilities (players vs each other, neutrals peaceful)
+    for (let t1 = 0; t1 < 4; t1++) {
+        for (let t2 = 0; t2 < 4; t2++) {
+            if (t1 !== t2) {
+                gameState.hostility[t1][t2] = true;
+            }
+        }
+    }
+    // Neutrals start peaceful to everyone
+    gameState.hostility[4] = {};
+    gameState.hostility[5] = {};
+
+    // ===== INITIALIZATION =====
+    async function init() {
+        updateLoading(10, 'Creating universe...');
+        
+        canvas = document.getElementById('renderCanvas');
+        engine = new BABYLON.Engine(canvas, true);
+        scene = new BABYLON.Scene(engine);
+        scene.clearColor = new BABYLON.Color3(0.02, 0.02, 0.05);
+        
+        updateLoading(20, 'Configuring sensors...');
+        
+        // Camera - RTS style
+        camera = new BABYLON.ArcRotateCamera('camera', -Math.PI / 2, Math.PI / 3, 150, BABYLON.Vector3.Zero(), scene);
+        camera.lowerBetaLimit = 0.2;
+        camera.upperBetaLimit = Math.PI / 2.2;
+        camera.lowerRadiusLimit = 50;
+        camera.upperRadiusLimit = 400;
+        camera.panningSensibility = 50;
+        camera.attachControl(canvas, true);
+        
+        updateLoading(30, 'Igniting stars...');
+        
+        // Lights
+        const ambient = new BABYLON.HemisphericLight('ambient', new BABYLON.Vector3(0, 1, 0), scene);
+        ambient.intensity = 0.4;
+        ambient.groundColor = new BABYLON.Color3(0.1, 0.1, 0.2);
+        
+        const sun = new BABYLON.DirectionalLight('sun', new BABYLON.Vector3(-1, -2, -1), scene);
+        sun.intensity = 0.8;
+        
+        updateLoading(40, 'Generating starfield...');
+        createStarfield();
+        
+        updateLoading(50, 'Placing asteroid belt...');
+        createAsteroidBelt();
+        
+        updateLoading(60, 'Seeding ore fields...');
+        generateOreFields();
+        generateCrystalFields();
+        
+        updateLoading(70, 'Establishing bases...');
+        spawnPlayerBases();
+        
+        updateLoading(80, 'Awakening ancient ones...');
+        spawnNeutralAliens();
+        
+        updateLoading(90, 'Initializing HUD...');
+        setupMinimap();
+        setupUI();
+        setupInput();
+        
+        updateLoading(100, 'Launch!');
+        
+        setTimeout(() => {
+            document.getElementById('loadingScreen').style.display = 'none';
+            
+            // Start game loop
+            engine.runRenderLoop(() => {
+                if (gameState.running) {
+                    update(engine.getDeltaTime() / 1000);
+                }
+                scene.render();
+                renderMinimap();
+            });
+        }, 500);
+        
+        window.addEventListener('resize', () => engine.resize());
+    }
+
+    function updateLoading(percent, text) {
+        document.getElementById('loadingProgress').style.width = percent + '%';
+        document.getElementById('loadingText').textContent = text;
+    }
+
+    // ===== STARFIELD =====
+    function createStarfield() {
+        const starCount = 3000;
+        const positions = [];
+        const colors = [];
+        
+        for (let i = 0; i < starCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 800 + Math.random() * 400;
+            
+            positions.push(
+                r * Math.sin(phi) * Math.cos(theta),
+                r * Math.cos(phi),
+                r * Math.sin(phi) * Math.sin(theta)
+            );
+            
+            const brightness = 0.3 + Math.random() * 0.7;
+            const tint = Math.random();
+            if (tint < 0.1) {
+                colors.push(brightness, brightness * 0.8, brightness * 0.6, 1);
+            } else if (tint < 0.2) {
+                colors.push(brightness * 0.8, brightness * 0.9, brightness, 1);
+            } else {
+                colors.push(brightness, brightness, brightness, 1);
+            }
+        }
+        
+        const stars = new BABYLON.PointsCloudSystem('stars', 1, scene);
+        stars.addPoints(starCount, (particle, i) => {
+            particle.position = new BABYLON.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]);
+            particle.color = new BABYLON.Color4(colors[i*4], colors[i*4+1], colors[i*4+2], colors[i*4+3]);
+        });
+        stars.buildMeshAsync();
+    }
+
+    // ===== ASTEROID BELT =====
+    function createAsteroidBelt() {
+        const asteroidMat = new BABYLON.StandardMaterial('asteroidMat', scene);
+        asteroidMat.diffuseColor = new BABYLON.Color3(0.4, 0.35, 0.3);
+        asteroidMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+        
+        for (let i = 0; i < CONFIG.NUM_ASTEROIDS; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = CONFIG.ASTEROID_BELT_INNER + Math.random() * (CONFIG.ASTEROID_BELT_OUTER - CONFIG.ASTEROID_BELT_INNER);
+            const size = 3 + Math.random() * 12;
+            
+            const asteroid = BABYLON.MeshBuilder.CreateIcoSphere('asteroid_' + i, {
+                radius: size,
+                subdivisions: 1
+            }, scene);
+            
+            asteroid.position.x = Math.cos(angle) * radius;
+            asteroid.position.z = Math.sin(angle) * radius;
+            asteroid.position.y = (Math.random() - 0.5) * 40;
+            
+            asteroid.rotation = new BABYLON.Vector3(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            
+            asteroid.material = asteroidMat;
+            
+            asteroids.push({
+                mesh: asteroid,
+                size: size,
+                rotSpeed: new BABYLON.Vector3(
+                    (Math.random() - 0.5) * 0.01,
+                    (Math.random() - 0.5) * 0.01,
+                    (Math.random() - 0.5) * 0.01
+                ),
+                orbitSpeed: (Math.random() - 0.5) * 0.0001
+            });
+        }
+    }
+
+    // ===== ORE GENERATION (C&C Style) =====
+    function generateOreFields() {
+        const usedPositions = [];
+        
+        for (let f = 0; f < CONFIG.ORE_FIELDS; f++) {
+            // Find a valid position not in asteroid belt or too close to others
+            let fieldX, fieldZ;
+            let attempts = 0;
+            do {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 100 + Math.random() * 300;
+                fieldX = Math.cos(angle) * dist;
+                fieldZ = Math.sin(angle) * dist;
+                attempts++;
+            } while (attempts < 50 && (
+                isInAsteroidBelt(fieldX, fieldZ) ||
+                usedPositions.some(p => Math.hypot(p.x - fieldX, p.z - fieldZ) < 80)
+            ));
+            
+            usedPositions.push({ x: fieldX, z: fieldZ });
+            
+            // Create ore nodes in this field
+            const nodesInField = CONFIG.ORE_PER_FIELD_MIN + 
+                Math.floor(Math.random() * (CONFIG.ORE_PER_FIELD_MAX - CONFIG.ORE_PER_FIELD_MIN));
+            
+            for (let n = 0; n < nodesInField; n++) {
+                const offsetAngle = Math.random() * Math.PI * 2;
+                const offsetDist = Math.random() * 30;
+                const x = fieldX + Math.cos(offsetAngle) * offsetDist;
+                const z = fieldZ + Math.sin(offsetAngle) * offsetDist;
+                const amount = CONFIG.ORE_AMOUNT_MIN + 
+                    Math.random() * (CONFIG.ORE_AMOUNT_MAX - CONFIG.ORE_AMOUNT_MIN);
+                
+                createOreNode(x, z, amount);
+            }
+        }
+    }
+
+    function createOreNode(x, z, amount) {
+        const ore = {
+            x, z,
+            amount: amount,
+            maxAmount: amount,
+            originalAmount: amount,
+            size: 4 + (amount / CONFIG.ORE_AMOUNT_MAX) * 4,
+            depleted: false,
+            regrowTimer: 0,
+            mesh: null
+        };
+        
+        // Create 3D mesh
+        const oreMat = new BABYLON.StandardMaterial('oreMat_' + oreNodes.length, scene);
+        oreMat.diffuseColor = new BABYLON.Color3(0.8, 0.5, 0.2);
+        oreMat.emissiveColor = new BABYLON.Color3(0.3, 0.15, 0.05);
+        oreMat.specularColor = new BABYLON.Color3(0.5, 0.3, 0.1);
+        
+        ore.mesh = BABYLON.MeshBuilder.CreateIcoSphere('ore_' + oreNodes.length, {
+            radius: ore.size,
+            subdivisions: 1
+        }, scene);
+        ore.mesh.position = new BABYLON.Vector3(x, 0, z);
+        ore.mesh.material = oreMat;
+        
+        // Glow layer
+        const glow = new BABYLON.HighlightLayer('oreGlow_' + oreNodes.length, scene);
+        glow.addMesh(ore.mesh, new BABYLON.Color3(1, 0.5, 0));
+        ore.glow = glow;
+        
+        oreNodes.push(ore);
+        return ore;
+    }
+
+    // ===== CRYSTAL GENERATION (Rare, Valuable) =====
+    function generateCrystalFields() {
+        for (let f = 0; f < CONFIG.CRYSTAL_FIELDS; f++) {
+            // Place crystals in harder to reach areas
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 250 + Math.random() * 100; // Further out
+            const x = Math.cos(angle) * dist;
+            const z = Math.sin(angle) * dist;
+            
+            if (!isInAsteroidBelt(x, z)) {
+                const amount = CONFIG.CRYSTAL_AMOUNT_MIN + 
+                    Math.random() * (CONFIG.CRYSTAL_AMOUNT_MAX - CONFIG.CRYSTAL_AMOUNT_MIN);
+                createCrystalNode(x, z, amount);
+            }
+        }
+    }
+
+    function createCrystalNode(x, z, amount) {
+        const crystal = {
+            x, z,
+            amount: amount,
+            maxAmount: amount,
+            size: 5 + (amount / CONFIG.CRYSTAL_AMOUNT_MAX) * 3,
+            depleted: false,
+            regrowTimer: 0,
+            mesh: null,
+            isCrystal: true
+        };
+        
+        // Create crystal mesh (spiky formation)
+        const crystalMat = new BABYLON.StandardMaterial('crystalMat_' + crystalNodes.length, scene);
+        crystalMat.diffuseColor = new BABYLON.Color3(0.8, 0.2, 1.0);
+        crystalMat.emissiveColor = new BABYLON.Color3(0.5, 0.1, 0.8);
+        crystalMat.specularColor = new BABYLON.Color3(1, 0.5, 1);
+        crystalMat.alpha = 0.9;
+        
+        // Create cluster of crystal spikes
+        const parent = new BABYLON.TransformNode('crystal_' + crystalNodes.length, scene);
+        parent.position = new BABYLON.Vector3(x, 0, z);
+        
+        for (let i = 0; i < 5; i++) {
+            const spike = BABYLON.MeshBuilder.CreateCylinder('spike_' + i, {
+                height: crystal.size * (0.8 + Math.random() * 0.6),
+                diameterTop: 0,
+                diameterBottom: crystal.size * 0.4,
+                tessellation: 6
+            }, scene);
+            spike.position.x = (Math.random() - 0.5) * crystal.size;
+            spike.position.z = (Math.random() - 0.5) * crystal.size;
+            spike.rotation.x = (Math.random() - 0.5) * 0.3;
+            spike.rotation.z = (Math.random() - 0.5) * 0.3;
+            spike.material = crystalMat;
+            spike.parent = parent;
+        }
+        
+        crystal.mesh = parent;
+        
+        // Glow
+        const glow = new BABYLON.HighlightLayer('crystalGlow_' + crystalNodes.length, scene);
+        parent.getChildMeshes().forEach(m => glow.addMesh(m, new BABYLON.Color3(1, 0, 1)));
+        crystal.glow = glow;
+        
+        crystalNodes.push(crystal);
+        return crystal;
+    }
+
+    function isInAsteroidBelt(x, z) {
+        const dist = Math.hypot(x, z);
+        return dist > CONFIG.ASTEROID_BELT_INNER - 30 && dist < CONFIG.ASTEROID_BELT_OUTER + 30;
+    }
+
+    // ===== SPAWN PLAYER BASES =====
+    function spawnPlayerBases() {
+        const numPlayers = 1 + CONFIG.NUM_AI_PLAYERS;
+        const angleStep = (Math.PI * 2) / numPlayers;
+        const baseDist = 200;
+        
+        for (let t = 0; t < numPlayers; t++) {
+            const angle = angleStep * t - Math.PI / 2;
+            const x = Math.cos(angle) * baseDist;
+            const z = Math.sin(angle) * baseDist;
+            
+            // Command Center
+            const cc = new Building(x, z, t, 'commandCenter');
+            cc.constructionProgress = 1; // Start complete
+            cc.isConstructing = false;
+            entities.push(cc);
+            
+            // Starting harvester
+            const harvester = new Unit(x + 20, z, t, 'harvester');
+            entities.push(harvester);
+            
+            // Put some starting ore near each base
+            for (let i = 0; i < 3; i++) {
+                const oreAngle = angle + (Math.random() - 0.5) * 0.5;
+                const oreDist = 50 + Math.random() * 30;
+                createOreNode(
+                    x + Math.cos(oreAngle) * oreDist,
+                    z + Math.sin(oreAngle) * oreDist,
+                    2000 + Math.random() * 1000
+                );
+            }
+        }
+    }
+
+    // ===== NEUTRAL ALIENS =====
+    function spawnNeutralAliens() {
+        for (let i = 0; i < CONFIG.NUM_NEUTRAL_ALIENS; i++) {
+            const team = TEAMS.NEUTRAL + i;
+            
+            // Place alien bases near crystal fields or in strategic locations
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 300 + Math.random() * 50;
+            const x = Math.cos(angle) * dist;
+            const z = Math.sin(angle) * dist;
+            
+            if (!isInAsteroidBelt(x, z)) {
+                // Alien structure
+                const alienBase = new Building(x, z, team, 'commandCenter');
+                alienBase.constructionProgress = 1;
+                alienBase.isConstructing = false;
+                alienBase.isAlien = true;
+                entities.push(alienBase);
+                
+                // Spawn guardian units
+                for (let g = 0; g < 3; g++) {
+                    const gAngle = (g / 3) * Math.PI * 2;
+                    const guardian = new AlienUnit(
+                        x + Math.cos(gAngle) * 25,
+                        z + Math.sin(gAngle) * 25,
+                        team,
+                        'guardian'
+                    );
+                    entities.push(guardian);
+                }
+                
+                // One sentinel
+                const sentinel = new AlienUnit(x, z + 35, team, 'sentinel');
+                entities.push(sentinel);
+            }
+        }
+    }
+
+    // ===== BUILDING CLASS =====
+    class Building {
+        constructor(x, z, team, type) {
+            this.entityType = 'building';
+            this.type = type;
+            this.team = team;
+            this.def = BUILDINGS[type];
+            
+            this.x = x;
+            this.z = z;
+            this.size = this.def.size;
+            this.maxHealth = this.def.maxHealth;
+            this.health = this.maxHealth * 0.1;
+            this.dead = false;
+            
+            this.isConstructing = true;
+            this.constructionProgress = 0;
+            this.buildTime = this.def.buildTime;
+            
+            this.buildQueue = [];
+            this.buildProgress = 0;
+            this.rallyPoint = null;
+            
+            // Refinery specific
+            this.storedOre = 0;
+            this.storedCrystals = 0;
+            
+            // Turret specific
+            this.lastFire = 0;
+            this.turretHead = null;
+            
+            this.mesh = null;
+            this.createMesh();
+        }
+        
+        createMesh() {
+            const color = TEAM_COLORS[this.team];
+            
+            // Create parent transform node
+            this.mesh = new BABYLON.TransformNode('building_' + this.type, scene);
+            this.mesh.position = new BABYLON.Vector3(this.x, 0, this.z);
+            
+            // Try to use enhanced building models if available
+            if (window.VoidBuildingsEnhanced) {
+                if (!window.VoidBuildingsEnhanced.initialized) {
+                    window.VoidBuildingsEnhanced.init(scene);
+                }
+                const success = window.VoidBuildingsEnhanced.createBuildingMesh(
+                    this.type, this.size, color, this.team, this.mesh
+                );
+                if (success) {
+                    // Get turret head reference if this is a turret
+                    if (this.type === 'turret') {
+                        this.turretHead = this.mesh.getChildTransformNodes().find(n => n.name === 'turretHead');
+                    }
+                    this.addTeamRing(color);
+                    return;
+                }
+            }
+            
+            // Fallback to default building creation
+            switch(this.type) {
+                case 'commandCenter':
+                    this.createCommandCenter(color);
+                    break;
+                case 'powerPlant':
+                    this.createPowerPlant(color);
+                    break;
+                case 'refinery':
+                    this.createRefinery(color);
+                    break;
+                case 'shipyard':
+                case 'advancedShipyard':
+                    this.createShipyard(color);
+                    break;
+                case 'turret':
+                    this.createTurret(color);
+                    break;
+                case 'supplyDepot':
+                    this.createSupplyDepot(color);
+                    break;
+                case 'radar':
+                    this.createRadar(color);
+                    break;
+                default:
+                    this.createGenericBuilding(color);
+            }
+            
+            this.addTeamRing(color);
+        }
+        
+        addTeamRing(color) {
+            // Team ring
+            const ring = BABYLON.MeshBuilder.CreateTorus('ring', {
+                diameter: this.size * 2.5,
+                thickness: 0.5,
+                tessellation: 32
+            }, scene);
+            ring.position.y = 0.1;
+            ring.parent = this.mesh;
+            
+            const ringMat = new BABYLON.StandardMaterial('ringMat', scene);
+            ringMat.emissiveColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            ringMat.alpha = 0.6;
+            ring.material = ringMat;
+        }
+        
+        createCommandCenter(color) {
+            const parent = this.mesh;
+            
+            // Main hexagonal base
+            const base = BABYLON.MeshBuilder.CreateCylinder('base', {
+                height: 4,
+                diameter: this.size * 2,
+                tessellation: 6
+            }, scene);
+            base.parent = parent;
+            base.position.y = 2;
+            
+            const baseMat = new BABYLON.StandardMaterial('baseMat', scene);
+            baseMat.diffuseColor = new BABYLON.Color3(color[0] * 0.6, color[1] * 0.6, color[2] * 0.6);
+            baseMat.emissiveColor = new BABYLON.Color3(color[0] * 0.2, color[1] * 0.2, color[2] * 0.2);
+            base.material = baseMat;
+            
+            // Central tower
+            const tower = BABYLON.MeshBuilder.CreateCylinder('tower', {
+                height: 12,
+                diameterTop: 3,
+                diameterBottom: 5,
+                tessellation: 8
+            }, scene);
+            tower.parent = parent;
+            tower.position.y = 8;
+            
+            const towerMat = new BABYLON.StandardMaterial('towerMat', scene);
+            towerMat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            towerMat.emissiveColor = new BABYLON.Color3(color[0] * 0.3, color[1] * 0.3, color[2] * 0.3);
+            tower.material = towerMat;
+            
+            // Antenna
+            const antenna = BABYLON.MeshBuilder.CreateCylinder('antenna', {
+                height: 6,
+                diameter: 0.5
+            }, scene);
+            antenna.parent = parent;
+            antenna.position.y = 17;
+            antenna.material = towerMat;
+            
+            // Dishes
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                const dish = BABYLON.MeshBuilder.CreateDisc('dish', { radius: 2 }, scene);
+                dish.parent = parent;
+                dish.position.set(Math.cos(angle) * 8, 6, Math.sin(angle) * 8);
+                dish.rotation.x = Math.PI / 4;
+                dish.rotation.y = angle;
+                dish.material = baseMat;
+            }
+        }
+        
+        createPowerPlant(color) {
+            const parent = this.mesh;
+            
+            // Reactor core
+            const core = BABYLON.MeshBuilder.CreateSphere('core', { diameter: this.size }, scene);
+            core.parent = parent;
+            core.position.y = this.size / 2 + 2;
+            
+            const coreMat = new BABYLON.StandardMaterial('coreMat', scene);
+            coreMat.emissiveColor = new BABYLON.Color3(1, 1, 0.5);
+            coreMat.alpha = 0.8;
+            core.material = coreMat;
+            
+            // Containment rings
+            for (let i = 0; i < 3; i++) {
+                const ring = BABYLON.MeshBuilder.CreateTorus('ring' + i, {
+                    diameter: this.size * 1.3,
+                    thickness: 0.3,
+                    tessellation: 24
+                }, scene);
+                ring.parent = parent;
+                ring.position.y = this.size / 2 + 2;
+                ring.rotation.x = Math.PI / 2;
+                ring.rotation.y = (i / 3) * Math.PI;
+                
+                const ringMat = new BABYLON.StandardMaterial('ringMat', scene);
+                ringMat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+                ring.material = ringMat;
+            }
+            
+            // Base
+            const base = BABYLON.MeshBuilder.CreateCylinder('base', {
+                height: 2,
+                diameter: this.size * 1.5,
+                tessellation: 8
+            }, scene);
+            base.parent = parent;
+            base.position.y = 1;
+            
+            const baseMat = new BABYLON.StandardMaterial('baseMat', scene);
+            baseMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+            base.material = baseMat;
+        }
+        
+        createRefinery(color) {
+            const parent = this.mesh;
+            
+            // Main processing building
+            const main = BABYLON.MeshBuilder.CreateBox('main', {
+                width: this.size * 1.5,
+                height: 8,
+                depth: this.size * 1.2
+            }, scene);
+            main.parent = parent;
+            main.position.y = 4;
+            
+            const mainMat = new BABYLON.StandardMaterial('mainMat', scene);
+            mainMat.diffuseColor = new BABYLON.Color3(0.5, 0.35, 0.2);
+            main.material = mainMat;
+            
+            // Storage tanks
+            for (let i = -1; i <= 1; i += 2) {
+                const tank = BABYLON.MeshBuilder.CreateCylinder('tank', {
+                    height: 10,
+                    diameter: 4
+                }, scene);
+                tank.parent = parent;
+                tank.position.set(i * 7, 5, 0);
+                
+                const tankMat = new BABYLON.StandardMaterial('tankMat', scene);
+                tankMat.diffuseColor = new BABYLON.Color3(0.6, 0.4, 0.2);
+                tank.material = tankMat;
+            }
+            
+            // Smokestacks
+            for (let i = 0; i < 2; i++) {
+                const stack = BABYLON.MeshBuilder.CreateCylinder('stack', {
+                    height: 6,
+                    diameterTop: 1.5,
+                    diameterBottom: 2
+                }, scene);
+                stack.parent = parent;
+                stack.position.set(-3 + i * 6, 11, -4);
+                
+                const stackMat = new BABYLON.StandardMaterial('stackMat', scene);
+                stackMat.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+                stack.material = stackMat;
+            }
+            
+            // Landing pad
+            const pad = BABYLON.MeshBuilder.CreateCylinder('pad', {
+                height: 0.5,
+                diameter: 12
+            }, scene);
+            pad.parent = parent;
+            pad.position.set(0, 0.25, 10);
+            
+            const padMat = new BABYLON.StandardMaterial('padMat', scene);
+            padMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+            padMat.emissiveColor = new BABYLON.Color3(color[0] * 0.1, color[1] * 0.1, color[2] * 0.1);
+            pad.material = padMat;
+        }
+        
+        createShipyard(color) {
+            const parent = this.mesh;
+            const scale = this.type === 'advancedShipyard' ? 1.3 : 1;
+            
+            // Hangar structure
+            const hangar = BABYLON.MeshBuilder.CreateBox('hangar', {
+                width: this.size * 1.8 * scale,
+                height: 10 * scale,
+                depth: this.size * 1.4 * scale
+            }, scene);
+            hangar.parent = parent;
+            hangar.position.y = 5 * scale;
+            
+            const hangarMat = new BABYLON.StandardMaterial('hangarMat', scene);
+            hangarMat.diffuseColor = new BABYLON.Color3(0.4, 0.45, 0.5);
+            hangar.material = hangarMat;
+            
+            // Crane gantry
+            const gantry = BABYLON.MeshBuilder.CreateBox('gantry', {
+                width: this.size * 2 * scale,
+                height: 2,
+                depth: 2
+            }, scene);
+            gantry.parent = parent;
+            gantry.position.y = 14 * scale;
+            
+            const gantryMat = new BABYLON.StandardMaterial('gantryMat', scene);
+            gantryMat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            gantry.material = gantryMat;
+            
+            // Support pillars
+            for (let i = -1; i <= 1; i += 2) {
+                const pillar = BABYLON.MeshBuilder.CreateCylinder('pillar', {
+                    height: 14 * scale,
+                    diameter: 1.5
+                }, scene);
+                pillar.parent = parent;
+                pillar.position.set(i * this.size * scale, 7 * scale, 0);
+                pillar.material = gantryMat;
+            }
+            
+            // Construction bay glow
+            const bayGlow = BABYLON.MeshBuilder.CreatePlane('bayGlow', {
+                width: this.size * scale,
+                height: 6 * scale
+            }, scene);
+            bayGlow.parent = parent;
+            bayGlow.position.set(0, 5 * scale, this.size * 0.7 * scale + 0.1);
+            
+            const glowMat = new BABYLON.StandardMaterial('glowMat', scene);
+            glowMat.emissiveColor = new BABYLON.Color3(0.2, 0.5, 1);
+            glowMat.alpha = 0.5;
+            bayGlow.material = glowMat;
+        }
+        
+        createTurret(color) {
+            const parent = this.mesh;
+            
+            // Base platform
+            const base = BABYLON.MeshBuilder.CreateCylinder('base', {
+                height: 2,
+                diameter: this.size * 2,
+                tessellation: 8
+            }, scene);
+            base.parent = parent;
+            base.position.y = 1;
+            
+            const baseMat = new BABYLON.StandardMaterial('baseMat', scene);
+            baseMat.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+            base.material = baseMat;
+            
+            // Rotating turret head
+            const head = new BABYLON.TransformNode('turretHead', scene);
+            head.parent = parent;
+            head.position.y = 3;
+            this.turretHead = head;
+            
+            // Turret body
+            const body = BABYLON.MeshBuilder.CreateCylinder('body', {
+                height: 3,
+                diameterTop: 3,
+                diameterBottom: 4,
+                tessellation: 8
+            }, scene);
+            body.parent = head;
+            body.position.y = 1;
+            
+            const bodyMat = new BABYLON.StandardMaterial('bodyMat', scene);
+            bodyMat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            body.material = bodyMat;
+            
+            // Twin barrels
+            for (let i = -1; i <= 1; i += 2) {
+                const barrel = BABYLON.MeshBuilder.CreateCylinder('barrel', {
+                    height: 6,
+                    diameter: 0.6
+                }, scene);
+                barrel.parent = head;
+                barrel.position.set(i * 1.2, 2, 4);
+                barrel.rotation.x = Math.PI / 2;
+                
+                const barrelMat = new BABYLON.StandardMaterial('barrelMat', scene);
+                barrelMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+                barrel.material = barrelMat;
+            }
+        }
+        
+        createSupplyDepot(color) {
+            const parent = this.mesh;
+            
+            // Platform
+            const platform = BABYLON.MeshBuilder.CreateBox('platform', {
+                width: this.size * 2,
+                height: 1,
+                depth: this.size * 2
+            }, scene);
+            platform.parent = parent;
+            platform.position.y = 0.5;
+            
+            const platMat = new BABYLON.StandardMaterial('platMat', scene);
+            platMat.diffuseColor = new BABYLON.Color3(0.35, 0.35, 0.35);
+            platform.material = platMat;
+            
+            // Containers
+            const containerMat = new BABYLON.StandardMaterial('containerMat', scene);
+            containerMat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            
+            for (let i = 0; i < 4; i++) {
+                const container = BABYLON.MeshBuilder.CreateBox('container' + i, {
+                    width: 3,
+                    height: 3,
+                    depth: 5
+                }, scene);
+                container.parent = parent;
+                container.position.set(
+                    (i % 2 === 0 ? -1 : 1) * 2.5,
+                    2.5 + Math.floor(i / 2) * 3.5,
+                    0
+                );
+                container.material = containerMat;
+            }
+        }
+        
+        createRadar(color) {
+            const parent = this.mesh;
+            
+            // Base
+            const base = BABYLON.MeshBuilder.CreateCylinder('base', {
+                height: 2,
+                diameter: this.size * 1.5,
+                tessellation: 8
+            }, scene);
+            base.parent = parent;
+            base.position.y = 1;
+            
+            const baseMat = new BABYLON.StandardMaterial('baseMat', scene);
+            baseMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+            base.material = baseMat;
+            
+            // Tower
+            const tower = BABYLON.MeshBuilder.CreateCylinder('tower', {
+                height: 10,
+                diameter: 1.5
+            }, scene);
+            tower.parent = parent;
+            tower.position.y = 7;
+            tower.material = baseMat;
+            
+            // Rotating dish
+            const dishParent = new BABYLON.TransformNode('dishParent', scene);
+            dishParent.parent = parent;
+            dishParent.position.y = 12;
+            this.turretHead = dishParent; // Reuse turret rotation
+            
+            const dish = BABYLON.MeshBuilder.CreateDisc('dish', { radius: 4 }, scene);
+            dish.parent = dishParent;
+            dish.rotation.x = -Math.PI / 4;
+            
+            const dishMat = new BABYLON.StandardMaterial('dishMat', scene);
+            dishMat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            dishMat.emissiveColor = new BABYLON.Color3(color[0] * 0.2, color[1] * 0.2, color[2] * 0.2);
+            dish.material = dishMat;
+        }
+        
+        createGenericBuilding(color) {
+            const box = BABYLON.MeshBuilder.CreateBox('building', {
+                width: this.size,
+                height: this.size * 0.8,
+                depth: this.size
+            }, scene);
+            box.parent = this.mesh;
+            box.position.y = this.size * 0.4;
+            
+            const mat = new BABYLON.StandardMaterial('buildingMat', scene);
+            mat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            box.material = mat;
+        }
+        
+        update(dt) {
+            if (this.dead) return;
+            
+            // Construction
+            if (this.isConstructing) {
+                this.constructionProgress += dt / this.buildTime;
+                this.health = this.maxHealth * (0.1 + 0.9 * this.constructionProgress);
+                
+                if (this.constructionProgress >= 1) {
+                    this.isConstructing = false;
+                    this.constructionProgress = 1;
+                    this.health = this.maxHealth;
+                    if (this.team === TEAMS.PLAYER) {
+                        showAlert(`${this.def.name} complete!`, 'success');
+                    }
+                }
+                return;
+            }
+            
+            // Building production
+            if (this.buildQueue.length > 0) {
+                const building = this.buildQueue[0];
+                const unitDef = UNITS[building.type];
+                this.buildProgress += dt / unitDef.buildTime;
+                
+                if (this.buildProgress >= 1) {
+                    this.spawnUnit(building.type);
+                    this.buildQueue.shift();
+                    this.buildProgress = 0;
+                }
+            }
+            
+            // Refinery processing
+            if (this.type === 'refinery' && !this.isConstructing) {
+                const processAmount = Math.min(this.storedOre, this.def.processRate * dt);
+                if (processAmount > 0) {
+                    this.storedOre -= processAmount;
+                    gameState.resources[this.team].ore -= processAmount;
+                    gameState.resources[this.team].credits += processAmount * 2;
+                }
+                
+                const crystalProcess = Math.min(this.storedCrystals, this.def.processRate * 0.5 * dt);
+                if (crystalProcess > 0) {
+                    this.storedCrystals -= crystalProcess;
+                    gameState.resources[this.team].crystals -= crystalProcess;
+                    gameState.resources[this.team].credits += crystalProcess * CONFIG.CRYSTAL_VALUE_MULTIPLIER * 2;
+                }
+            }
+            
+            // Turret combat
+            if (this.type === 'turret' && !this.isConstructing) {
+                const target = this.findTarget();
+                if (target && this.turretHead) {
+                    // Rotate turret to face target
+                    const dx = target.mesh.position.x - this.mesh.position.x;
+                    const dz = target.mesh.position.z - this.mesh.position.z;
+                    const targetAngle = Math.atan2(dx, dz);
+                    this.turretHead.rotation.y = targetAngle;
+                    
+                    // Fire
+                    const now = performance.now();
+                    if (now - this.lastFire > this.def.fireRate) {
+                        this.fireAt(target);
+                        this.lastFire = now;
+                    }
+                }
+            }
+            
+            // Radar rotation
+            if (this.type === 'radar' && this.turretHead) {
+                this.turretHead.rotation.y += dt * 0.5;
+            }
+        }
+        
+        findTarget() {
+            let closest = null;
+            let closestDist = this.def.range || 0;
+            
+            for (const ent of entities) {
+                if (ent.dead || ent.team === this.team) continue;
+                if (!isHostile(this.team, ent.team)) continue;
+                
+                const dist = Math.hypot(
+                    ent.mesh.position.x - this.mesh.position.x,
+                    ent.mesh.position.z - this.mesh.position.z
+                );
+                if (dist < closestDist) {
+                    closest = ent;
+                    closestDist = dist;
+                }
+            }
+            return closest;
+        }
+        
+        fireAt(target) {
+            const startPos = this.mesh.position.clone();
+            startPos.y = 5;
+            createProjectile(startPos, target, this.def.damage, this.team);
+        }
+        
+        queueUnit(unitType) {
+            const unitDef = UNITS[unitType];
+            const res = gameState.resources[this.team];
+            
+            if (res.credits < unitDef.cost) {
+                if (this.team === TEAMS.PLAYER) showAlert('Insufficient credits', 'danger');
+                return false;
+            }
+            
+            if (res.supply + unitDef.supply > res.maxSupply) {
+                if (this.team === TEAMS.PLAYER) showAlert('Supply limit reached', 'danger');
+                return false;
+            }
+            
+            res.credits -= unitDef.cost;
+            this.buildQueue.push({ type: unitType });
+            return true;
+        }
+        
+        spawnUnit(unitType) {
+            const unitDef = UNITS[unitType];
+            const angle = Math.random() * Math.PI * 2;
+            const dist = this.size + 8;
+            const x = this.mesh.position.x + Math.cos(angle) * dist;
+            const z = this.mesh.position.z + Math.sin(angle) * dist;
+            
+            const unit = new Unit(x, z, this.team, unitType);
+            entities.push(unit);
+            
+            gameState.resources[this.team].supply += unitDef.supply;
+            gameState.stats[this.team].unitsBuilt++;
+            
+            // Auto-rally or auto-harvest
+            if (this.rallyPoint) {
+                unit.moveTo(this.rallyPoint.x, this.rallyPoint.z);
+            } else if (unitType === 'harvester') {
+                const ore = unit.findNearestOre();
+                if (ore) unit.harvest(ore);
+            }
+            
+            if (this.team === TEAMS.PLAYER) {
+                showAlert(`${unitDef.name} ready!`, 'info');
+            }
+        }
+        
+        takeDamage(amount, attacker) {
+            this.health -= amount;
+            
+            // Provoke neutrals when attacked
+            if (this.team >= TEAMS.NEUTRAL && attacker) {
+                provokeNeutral(this.team, attacker.team);
+            }
+            
+            if (this.health <= 0) {
+                this.die(attacker);
+            }
+        }
+        
+        die(killer) {
+            this.dead = true;
+            this.mesh.dispose();
+            
+            if (killer) {
+                gameState.stats[killer.team].enemyKilled++;
+            }
+            
+            // Check victory/defeat
+            checkGameEnd();
+        }
+    }
+
+    // ===== UNIT CLASS =====
+    class Unit {
+        constructor(x, z, team, type) {
+            this.entityType = 'unit';
+            this.type = type;
+            this.team = team;
+            this.def = UNITS[type];
+            
+            this.size = this.def.size;
+            this.maxHealth = this.def.maxHealth;
+            this.health = this.maxHealth;
+            this.shield = this.def.shield || 0;
+            this.maxShield = this.shield;
+            this.speed = this.def.speed;
+            this.dead = false;
+            
+            // Movement
+            this.targetX = x;
+            this.targetZ = z;
+            this.moveCommand = null;
+            
+            // Combat
+            this.attackTarget = null;
+            this.lastFire = 0;
+            this.isAttackMoving = false;
+            this.holdPosition = false;
+            this.patrolPoints = null;
+            this.patrolIndex = 0;
+            
+            // Harvesting
+            this.harvestTarget = null;
+            this.cargo = 0;
+            this.cargoType = null; // 'ore' or 'crystal'
+            this.isReturning = false;
+            
+            this.mesh = null;
+            this.createMesh();
+            this.mesh.position = new BABYLON.Vector3(x, this.size, z);
+        }
+        
+        createMesh() {
+            const color = TEAM_COLORS[this.team];
+            const parent = new BABYLON.TransformNode('unit_' + this.type, scene);
+            
+            // Try to use enhanced ship models if available
+            if (window.VoidShipsEnhanced) {
+                if (!window.VoidShipsEnhanced.initialized) {
+                    window.VoidShipsEnhanced.init(scene);
+                }
+                const success = window.VoidShipsEnhanced.createShipMesh(
+                    this.type, this.size, color, this.team, parent
+                );
+                if (success) {
+                    this.mesh = parent;
+                    return;
+                }
+            }
+            
+            // Fallback to default ship creation
+            let mainMesh;
+            
+            if (this.type === 'harvester') {
+                mainMesh = this.createHarvesterMesh(color, parent);
+            } else if (['scout', 'interceptor', 'striker'].includes(this.type)) {
+                mainMesh = this.createFighterMesh(color, parent);
+            } else if (['heavy', 'bomber', 'gunship'].includes(this.type)) {
+                mainMesh = this.createMediumMesh(color, parent);
+            } else {
+                mainMesh = this.createCapitalMesh(color, parent);
+            }
+            
+            // Engine glow
+            const engineGlow = BABYLON.MeshBuilder.CreateSphere('engineGlow', {
+                diameter: this.size * 0.4
+            }, scene);
+            engineGlow.parent = parent;
+            engineGlow.position.z = -this.size * 0.7;
+            
+            const glowMat = new BABYLON.StandardMaterial('glowMat', scene);
+            glowMat.emissiveColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            glowMat.alpha = 0.7;
+            engineGlow.material = glowMat;
+            
+            this.mesh = parent;
+        }
+        
+        createHarvesterMesh(color, parent) {
+            // Boxy industrial shape
+            const body = BABYLON.MeshBuilder.CreateBox('body', {
+                width: this.size * 1.5,
+                height: this.size * 0.8,
+                depth: this.size * 2
+            }, scene);
+            body.parent = parent;
+            
+            const mat = new BABYLON.StandardMaterial('mat', scene);
+            mat.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.3);
+            mat.emissiveColor = new BABYLON.Color3(color[0] * 0.2, color[1] * 0.2, color[2] * 0.2);
+            body.material = mat;
+            
+            // Mining drill
+            const drill = BABYLON.MeshBuilder.CreateCylinder('drill', {
+                height: this.size,
+                diameterTop: 0.2,
+                diameterBottom: this.size * 0.5
+            }, scene);
+            drill.parent = parent;
+            drill.position.z = this.size * 1.2;
+            drill.rotation.x = Math.PI / 2;
+            
+            const drillMat = new BABYLON.StandardMaterial('drillMat', scene);
+            drillMat.diffuseColor = new BABYLON.Color3(0.6, 0.6, 0.6);
+            drill.material = drillMat;
+            
+            return body;
+        }
+        
+        createFighterMesh(color, parent) {
+            // Sleek fighter shape
+            const body = BABYLON.MeshBuilder.CreateCylinder('body', {
+                height: this.size * 2,
+                diameterTop: 0,
+                diameterBottom: this.size * 0.8,
+                tessellation: 4
+            }, scene);
+            body.parent = parent;
+            body.rotation.x = -Math.PI / 2;
+            
+            const mat = new BABYLON.StandardMaterial('mat', scene);
+            mat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            mat.emissiveColor = new BABYLON.Color3(color[0] * 0.2, color[1] * 0.2, color[2] * 0.2);
+            body.material = mat;
+            
+            // Wings
+            for (let i = -1; i <= 1; i += 2) {
+                const wing = BABYLON.MeshBuilder.CreateBox('wing', {
+                    width: this.size * 1.5,
+                    height: 0.2,
+                    depth: this.size * 0.8
+                }, scene);
+                wing.parent = parent;
+                wing.position.x = i * this.size * 0.6;
+                wing.rotation.z = i * 0.2;
+                wing.material = mat;
+            }
+            
+            return body;
+        }
+        
+        createMediumMesh(color, parent) {
+            // Bulkier medium ship
+            const body = BABYLON.MeshBuilder.CreateBox('body', {
+                width: this.size * 0.8,
+                height: this.size * 0.6,
+                depth: this.size * 1.5
+            }, scene);
+            body.parent = parent;
+            
+            const mat = new BABYLON.StandardMaterial('mat', scene);
+            mat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            mat.emissiveColor = new BABYLON.Color3(color[0] * 0.15, color[1] * 0.15, color[2] * 0.15);
+            body.material = mat;
+            
+            // Engine pods
+            for (let i = -1; i <= 1; i += 2) {
+                const pod = BABYLON.MeshBuilder.CreateCylinder('pod', {
+                    height: this.size * 0.8,
+                    diameter: this.size * 0.4
+                }, scene);
+                pod.parent = parent;
+                pod.position.set(i * this.size * 0.5, 0, -this.size * 0.4);
+                pod.rotation.x = Math.PI / 2;
+                pod.material = mat;
+            }
+            
+            return body;
+        }
+        
+        createCapitalMesh(color, parent) {
+            // Large capital ship
+            const body = BABYLON.MeshBuilder.CreateBox('body', {
+                width: this.size * 0.5,
+                height: this.size * 0.4,
+                depth: this.size * 1.2
+            }, scene);
+            body.parent = parent;
+            
+            const mat = new BABYLON.StandardMaterial('mat', scene);
+            mat.diffuseColor = new BABYLON.Color3(color[0] * 0.8, color[1] * 0.8, color[2] * 0.8);
+            mat.emissiveColor = new BABYLON.Color3(color[0] * 0.1, color[1] * 0.1, color[2] * 0.1);
+            body.material = mat;
+            
+            // Bridge
+            const bridge = BABYLON.MeshBuilder.CreateBox('bridge', {
+                width: this.size * 0.3,
+                height: this.size * 0.25,
+                depth: this.size * 0.3
+            }, scene);
+            bridge.parent = parent;
+            bridge.position.set(0, this.size * 0.25, this.size * 0.3);
+            bridge.material = mat;
+            
+            // Armor plates
+            const plateMat = new BABYLON.StandardMaterial('plateMat', scene);
+            plateMat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+            
+            for (let i = -1; i <= 1; i += 2) {
+                const plate = BABYLON.MeshBuilder.CreateBox('plate', {
+                    width: this.size * 0.15,
+                    height: this.size * 0.5,
+                    depth: this.size * 0.8
+                }, scene);
+                plate.parent = parent;
+                plate.position.x = i * this.size * 0.35;
+                plate.material = plateMat;
+            }
+            
+            return body;
+        }
+        
+        update(dt) {
+            if (this.dead) return;
+            
+            // Shield regeneration
+            if (this.shield < this.maxShield) {
+                this.shield = Math.min(this.maxShield, this.shield + dt * 5);
+            }
+            
+            // Harvesting logic
+            if (this.type === 'harvester') {
+                this.updateHarvester(dt);
+                return;
+            }
+            
+            // Combat logic
+            if (this.attackTarget && !this.attackTarget.dead) {
+                const dist = this.distanceTo(this.attackTarget);
+                
+                if (dist > this.def.range) {
+                    // Move closer
+                    if (!this.holdPosition) {
+                        this.moveToward(this.attackTarget.mesh.position.x, this.attackTarget.mesh.position.z, dt);
+                    }
+                } else {
+                    // Fire
+                    const now = performance.now();
+                    if (now - this.lastFire > this.def.fireRate) {
+                        this.fireAt(this.attackTarget);
+                        this.lastFire = now;
+                    }
+                }
+            } else {
+                this.attackTarget = null;
+                
+                // Attack-move: find targets while moving
+                if (this.isAttackMoving || this.holdPosition) {
+                    const target = this.findTarget();
+                    if (target) {
+                        this.attackTarget = target;
+                        return;
+                    }
+                }
+                
+                // Patrol logic
+                if (this.patrolPoints && this.patrolPoints.length > 0) {
+                    const target = this.patrolPoints[this.patrolIndex];
+                    const dist = Math.hypot(
+                        this.mesh.position.x - target.x,
+                        this.mesh.position.z - target.z
+                    );
+                    
+                    if (dist < 5) {
+                        this.patrolIndex = (this.patrolIndex + 1) % this.patrolPoints.length;
+                    } else {
+                        this.moveToward(target.x, target.z, dt);
+                    }
+                    
+                    // Check for enemies while patrolling
+                    const enemy = this.findTarget();
+                    if (enemy) this.attackTarget = enemy;
+                    return;
+                }
+                
+                // Normal movement
+                this.updateMovement(dt);
+            }
+        }
+        
+        updateHarvester(dt) {
+            if (this.isReturning) {
+                // Return to refinery
+                const refinery = this.findNearestRefinery();
+                if (refinery) {
+                    const dist = this.distanceTo(refinery);
+                    if (dist < refinery.size + 5) {
+                        // Deposit cargo
+                        if (this.cargoType === 'crystal') {
+                            refinery.storedCrystals += this.cargo;
+                            gameState.resources[this.team].crystals += this.cargo;
+                        } else {
+                            refinery.storedOre += this.cargo;
+                            gameState.resources[this.team].ore += this.cargo;
+                        }
+                        this.cargo = 0;
+                        this.cargoType = null;
+                        this.isReturning = false;
+                        
+                        // Return to harvest
+                        if (this.harvestTarget && !this.harvestTarget.depleted) {
+                            // Continue harvesting same target
+                        } else {
+                            // Find new ore
+                            const ore = this.findNearestOre();
+                            if (ore) this.harvestTarget = ore;
+                        }
+                    } else {
+                        this.moveToward(refinery.mesh.position.x, refinery.mesh.position.z, dt);
+                    }
+                }
+            } else if (this.harvestTarget && !this.harvestTarget.depleted) {
+                const dist = Math.hypot(
+                    this.mesh.position.x - this.harvestTarget.x,
+                    this.mesh.position.z - this.harvestTarget.z
+                );
+                
+                if (dist < this.harvestTarget.size + 5) {
+                    // Harvest
+                    const harvestAmount = Math.min(
+                        this.def.harvestRate * dt,
+                        this.def.cargoCapacity - this.cargo,
+                        this.harvestTarget.amount
+                    );
+                    
+                    this.harvestTarget.amount -= harvestAmount;
+                    this.cargo += harvestAmount;
+                    this.cargoType = this.harvestTarget.isCrystal ? 'crystal' : 'ore';
+                    
+                    // Update ore visual
+                    if (this.harvestTarget.mesh) {
+                        const scale = 0.3 + 0.7 * (this.harvestTarget.amount / this.harvestTarget.maxAmount);
+                        if (this.harvestTarget.mesh.scaling) {
+                            this.harvestTarget.mesh.scaling.setAll(scale);
+                        }
+                    }
+                    
+                    if (this.harvestTarget.amount <= 0) {
+                        this.harvestTarget.depleted = true;
+                        this.harvestTarget.regrowTimer = CONFIG.ORE_REGROW_DELAY;
+                        if (this.harvestTarget.mesh) {
+                            this.harvestTarget.mesh.setEnabled(false);
+                        }
+                    }
+                    
+                    if (this.cargo >= this.def.cargoCapacity) {
+                        this.isReturning = true;
+                    }
+                } else {
+                    this.moveToward(this.harvestTarget.x, this.harvestTarget.z, dt);
+                }
+            } else {
+                // No harvest target, return if has cargo or find new ore
+                if (this.cargo > 0) {
+                    this.isReturning = true;
+                } else {
+                    this.updateMovement(dt);
+                }
+            }
+        }
+        
+        updateMovement(dt) {
+            const dx = this.targetX - this.mesh.position.x;
+            const dz = this.targetZ - this.mesh.position.z;
+            const dist = Math.hypot(dx, dz);
+            
+            if (dist > 2) {
+                this.moveToward(this.targetX, this.targetZ, dt);
+            }
+        }
+        
+        moveToward(tx, tz, dt) {
+            const dx = tx - this.mesh.position.x;
+            const dz = tz - this.mesh.position.z;
+            const dist = Math.hypot(dx, dz);
+            
+            if (dist > 0.1) {
+                const moveSpeed = this.speed * dt;
+                const moveDist = Math.min(moveSpeed, dist);
+                
+                this.mesh.position.x += (dx / dist) * moveDist;
+                this.mesh.position.z += (dz / dist) * moveDist;
+                
+                // Face movement direction
+                this.mesh.rotation.y = Math.atan2(dx, dz);
+            }
+        }
+        
+        moveTo(x, z) {
+            this.targetX = x;
+            this.targetZ = z;
+            this.attackTarget = null;
+            this.isAttackMoving = false;
+            this.patrolPoints = null;
+        }
+        
+        attack(target) {
+            this.attackTarget = target;
+            this.isAttackMoving = false;
+        }
+        
+        attackMove(x, z) {
+            this.targetX = x;
+            this.targetZ = z;
+            this.isAttackMoving = true;
+            this.patrolPoints = null;
+        }
+        
+        patrol(points) {
+            this.patrolPoints = points;
+            this.patrolIndex = 0;
+        }
+        
+        stop() {
+            this.targetX = this.mesh.position.x;
+            this.targetZ = this.mesh.position.z;
+            this.attackTarget = null;
+            this.isAttackMoving = false;
+            this.patrolPoints = null;
+        }
+        
+        hold() {
+            this.holdPosition = !this.holdPosition;
+            if (this.holdPosition) {
+                this.stop();
+            }
+        }
+        
+        harvest(oreNode) {
+            this.harvestTarget = oreNode;
+            this.isReturning = false;
+        }
+        
+        findTarget() {
+            let closest = null;
+            let closestDist = this.def.range * 1.5;
+            
+            for (const ent of entities) {
+                if (ent.dead || ent.team === this.team) continue;
+                if (!isHostile(this.team, ent.team)) continue;
+                
+                const dist = this.distanceTo(ent);
+                if (dist < closestDist) {
+                    closest = ent;
+                    closestDist = dist;
+                }
+            }
+            return closest;
+        }
+        
+        findNearestOre() {
+            let closest = null;
+            let closestDist = Infinity;
+            
+            // Check both ore and crystals
+            const allNodes = [...oreNodes, ...crystalNodes];
+            
+            for (const ore of allNodes) {
+                if (ore.depleted) continue;
+                const dist = Math.hypot(
+                    this.mesh.position.x - ore.x,
+                    this.mesh.position.z - ore.z
+                );
+                if (dist < closestDist) {
+                    closest = ore;
+                    closestDist = dist;
+                }
+            }
+            return closest;
+        }
+        
+        findNearestRefinery() {
+            let closest = null;
+            let closestDist = Infinity;
+            
+            for (const ent of entities) {
+                if (ent.dead || ent.team !== this.team) continue;
+                if (ent.type !== 'refinery' || ent.isConstructing) continue;
+                
+                const dist = this.distanceTo(ent);
+                if (dist < closestDist) {
+                    closest = ent;
+                    closestDist = dist;
+                }
+            }
+            return closest;
+        }
+        
+        distanceTo(entity) {
+            return Math.hypot(
+                this.mesh.position.x - entity.mesh.position.x,
+                this.mesh.position.z - entity.mesh.position.z
+            );
+        }
+        
+        fireAt(target) {
+            const startPos = this.mesh.position.clone();
+            createProjectile(startPos, target, this.def.damage, this.team, this.def.splash);
+        }
+        
+        takeDamage(amount, attacker) {
+            // Shield absorbs first
+            if (this.shield > 0) {
+                const shieldDamage = Math.min(this.shield, amount);
+                this.shield -= shieldDamage;
+                amount -= shieldDamage;
+            }
+            
+            this.health -= amount;
+            
+            // Provoke neutrals
+            if (this.team >= TEAMS.NEUTRAL && attacker) {
+                provokeNeutral(this.team, attacker.team);
+            }
+            
+            if (this.health <= 0) {
+                this.die(attacker);
+            }
+        }
+        
+        die(killer) {
+            this.dead = true;
+            
+            // Update supply
+            gameState.resources[this.team].supply -= this.def.supply;
+            gameState.stats[this.team].unitsLost++;
+            
+            if (killer) {
+                gameState.stats[killer.team].enemyKilled++;
+            }
+            
+            // Death explosion
+            createExplosion(this.mesh.position.clone(), this.size);
+            
+            this.mesh.dispose();
+            
+            checkGameEnd();
+        }
+    }
+
+    // ===== ALIEN UNIT CLASS =====
+    class AlienUnit extends Unit {
+        constructor(x, z, team, type) {
+            // Use alien unit definitions
+            const alienDef = ALIEN_UNITS[type];
+            
+            // Temporarily add to UNITS for base constructor
+            UNITS['alien_' + type] = alienDef;
+            super(x, z, team, 'alien_' + type);
+            delete UNITS['alien_' + type];
+            
+            this.alienType = type;
+            this.homeX = x;
+            this.homeZ = z;
+            this.aggroRange = 100;
+            this.returnRange = 200;
+        }
+        
+        createMesh() {
+            const color = TEAM_COLORS[this.team];
+            const parent = new BABYLON.TransformNode('alien_' + this.alienType, scene);
+            
+            // Alien ships have unique organic-looking designs
+            if (this.alienType === 'guardian') {
+                // Hexagonal alien fighter
+                const body = BABYLON.MeshBuilder.CreateCylinder('body', {
+                    height: this.size * 0.5,
+                    diameter: this.size * 1.5,
+                    tessellation: 6
+                }, scene);
+                body.parent = parent;
+                
+                const mat = new BABYLON.StandardMaterial('mat', scene);
+                mat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+                mat.emissiveColor = new BABYLON.Color3(color[0] * 0.4, color[1] * 0.4, color[2] * 0.4);
+                body.material = mat;
+                
+                // Central eye/core
+                const core = BABYLON.MeshBuilder.CreateSphere('core', { diameter: this.size * 0.5 }, scene);
+                core.parent = parent;
+                core.position.y = this.size * 0.3;
+                
+                const coreMat = new BABYLON.StandardMaterial('coreMat', scene);
+                coreMat.emissiveColor = new BABYLON.Color3(1, 0.5, 1);
+                core.material = coreMat;
+                
+            } else if (this.alienType === 'sentinel') {
+                // Large alien capital ship
+                const body = BABYLON.MeshBuilder.CreatePolyhedron('body', {
+                    type: 1,
+                    size: this.size * 0.6
+                }, scene);
+                body.parent = parent;
+                
+                const mat = new BABYLON.StandardMaterial('mat', scene);
+                mat.diffuseColor = new BABYLON.Color3(color[0], color[1], color[2]);
+                mat.emissiveColor = new BABYLON.Color3(color[0] * 0.3, color[1] * 0.3, color[2] * 0.3);
+                body.material = mat;
+                
+                // Orbiting rings
+                for (let i = 0; i < 2; i++) {
+                    const ring = BABYLON.MeshBuilder.CreateTorus('ring' + i, {
+                        diameter: this.size * 1.5,
+                        thickness: 0.3,
+                        tessellation: 24
+                    }, scene);
+                    ring.parent = parent;
+                    ring.rotation.x = Math.PI / 2 + i * Math.PI / 4;
+                    
+                    const ringMat = new BABYLON.StandardMaterial('ringMat', scene);
+                    ringMat.emissiveColor = new BABYLON.Color3(color[0] * 0.5, color[1] * 0.5, color[2] * 0.5);
+                    ringMat.alpha = 0.7;
+                    ring.material = ringMat;
+                }
+            }
+            
+            this.mesh = parent;
+        }
+        
+        update(dt) {
+            if (this.dead) return;
+            
+            // Shield regen
+            if (this.shield < this.maxShield) {
+                this.shield = Math.min(this.maxShield, this.shield + dt * 10);
+            }
+            
+            // Check if we should return home
+            const distFromHome = Math.hypot(
+                this.mesh.position.x - this.homeX,
+                this.mesh.position.z - this.homeZ
+            );
+            
+            if (this.attackTarget && !this.attackTarget.dead) {
+                // Don't chase too far from home
+                if (distFromHome > this.returnRange) {
+                    this.attackTarget = null;
+                    this.targetX = this.homeX;
+                    this.targetZ = this.homeZ;
+                } else {
+                    const dist = this.distanceTo(this.attackTarget);
+                    
+                    if (dist > this.def.range) {
+                        this.moveToward(this.attackTarget.mesh.position.x, this.attackTarget.mesh.position.z, dt);
+                    } else {
+                        const now = performance.now();
+                        if (now - this.lastFire > this.def.fireRate) {
+                            this.fireAt(this.attackTarget);
+                            this.lastFire = now;
+                        }
+                    }
+                }
+            } else {
+                this.attackTarget = null;
+                
+                // Only attack if hostile to someone
+                if (Object.keys(gameState.hostility[this.team]).length > 0) {
+                    const target = this.findTarget();
+                    if (target) {
+                        const targetDist = Math.hypot(
+                            target.mesh.position.x - this.homeX,
+                            target.mesh.position.z - this.homeZ
+                        );
+                        if (targetDist < this.aggroRange) {
+                            this.attackTarget = target;
+                        }
+                    }
+                }
+                
+                // Return to patrol near home
+                if (distFromHome > 30) {
+                    this.moveToward(this.homeX, this.homeZ, dt);
+                }
+            }
+        }
+    }
+
+    // ===== PROJECTILE SYSTEM =====
+    function createProjectile(start, target, damage, team, splash = 0) {
+        const projectile = {
+            start: start.clone(),
+            target: target,
+            targetPos: target.mesh.position.clone(),
+            damage: damage,
+            team: team,
+            splash: splash,
+            progress: 0,
+            speed: 3,
+            mesh: null
+        };
+        
+        // Create projectile mesh
+        const color = TEAM_COLORS[team];
+        projectile.mesh = BABYLON.MeshBuilder.CreateSphere('projectile', { diameter: 1 }, scene);
+        projectile.mesh.position = start.clone();
+        
+        const mat = new BABYLON.StandardMaterial('projMat', scene);
+        mat.emissiveColor = new BABYLON.Color3(color[0], color[1], color[2]);
+        projectile.mesh.material = mat;
+        
+        projectiles.push(projectile);
+    }
+
+    function updateProjectiles(dt) {
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            const proj = projectiles[i];
+            proj.progress += dt * proj.speed;
+            
+            // Update position
+            const targetPos = proj.target && !proj.target.dead 
+                ? proj.target.mesh.position 
+                : proj.targetPos;
+            
+            proj.mesh.position = BABYLON.Vector3.Lerp(proj.start, targetPos, proj.progress);
+            
+            if (proj.progress >= 1) {
+                // Hit
+                if (proj.target && !proj.target.dead) {
+                    if (proj.splash > 0) {
+                        // Splash damage
+                        for (const ent of entities) {
+                            if (ent.dead || ent.team === proj.team) continue;
+                            const dist = Math.hypot(
+                                ent.mesh.position.x - targetPos.x,
+                                ent.mesh.position.z - targetPos.z
+                            );
+                            if (dist < proj.splash) {
+                                const falloff = 1 - (dist / proj.splash);
+                                ent.takeDamage(proj.damage * falloff, { team: proj.team });
+                            }
+                        }
+                    } else {
+                        proj.target.takeDamage(proj.damage, { team: proj.team });
+                    }
+                }
+                
+                proj.mesh.dispose();
+                projectiles.splice(i, 1);
+            }
+        }
+    }
+
+    function createExplosion(position, size) {
+        // Simple particle explosion
+        const particleCount = 20;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = BABYLON.MeshBuilder.CreateSphere('particle', { diameter: 0.5 }, scene);
+            particle.position = position.clone();
+            
+            const mat = new BABYLON.StandardMaterial('particleMat', scene);
+            mat.emissiveColor = new BABYLON.Color3(1, 0.5, 0);
+            mat.alpha = 1;
+            particle.material = mat;
+            
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 20 + Math.random() * 30;
+            const vx = Math.cos(angle) * speed;
+            const vz = Math.sin(angle) * speed;
+            const vy = (Math.random() - 0.5) * speed;
+            
+            particles.push({
+                mesh: particle,
+                vx, vy, vz,
+                life: 1
+            });
+        }
+    }
+
+    function updateParticles(dt) {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.mesh.position.x += p.vx * dt;
+            p.mesh.position.y += p.vy * dt;
+            p.mesh.position.z += p.vz * dt;
+            p.life -= dt * 2;
+            p.mesh.material.alpha = p.life;
+            
+            if (p.life <= 0) {
+                p.mesh.dispose();
+                particles.splice(i, 1);
+            }
+        }
+    }
+
+    // ===== DIPLOMACY =====
+    function isHostile(team1, team2) {
+        return gameState.hostility[team1] && gameState.hostility[team1][team2];
+    }
+
+    function provokeNeutral(neutralTeam, attackerTeam) {
+        if (!gameState.hostility[neutralTeam][attackerTeam]) {
+            gameState.hostility[neutralTeam][attackerTeam] = true;
+            
+            if (attackerTeam === TEAMS.PLAYER) {
+                showAlert(`The ${TEAM_NAMES[neutralTeam]} are now hostile!`, 'danger');
+            }
+        }
+    }
+
+    // ===== ORE REGROWTH (C&C Style) =====
+    function updateOreRegrowth(dt) {
+        // Ore regrowth
+        for (const ore of oreNodes) {
+            if (ore.depleted) {
+                ore.regrowTimer -= dt;
+                if (ore.regrowTimer <= 0) {
+                    // Start regrowing
+                    ore.amount += CONFIG.ORE_REGROW_RATE * dt;
+                    
+                    if (ore.amount >= ore.maxAmount * 0.3) {
+                        // Ore visible again
+                        ore.depleted = false;
+                        if (ore.mesh) {
+                            ore.mesh.setEnabled(true);
+                            ore.mesh.scaling.setAll(0.3);
+                        }
+                    }
+                }
+            } else if (ore.amount < ore.maxAmount) {
+                // Slowly regrow
+                ore.amount = Math.min(ore.maxAmount, ore.amount + CONFIG.ORE_REGROW_RATE * dt * 0.5);
+                
+                // Update visual scale
+                if (ore.mesh) {
+                    const scale = 0.3 + 0.7 * (ore.amount / ore.maxAmount);
+                    ore.mesh.scaling.setAll(scale);
+                }
+            }
+            
+            // Spread chance
+            if (!ore.depleted && ore.amount > ore.maxAmount * 0.8 && Math.random() < CONFIG.ORE_SPREAD_CHANCE) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 15 + Math.random() * 10;
+                const newX = ore.x + Math.cos(angle) * dist;
+                const newZ = ore.z + Math.sin(angle) * dist;
+                
+                // Check if not too close to existing ore
+                const tooClose = oreNodes.some(o => 
+                    Math.hypot(o.x - newX, o.z - newZ) < 12
+                );
+                
+                if (!tooClose && !isInAsteroidBelt(newX, newZ)) {
+                    createOreNode(newX, newZ, CONFIG.ORE_AMOUNT_MIN);
+                }
+            }
+        }
+        
+        // Crystal regrowth (slower)
+        for (const crystal of crystalNodes) {
+            if (crystal.depleted) {
+                crystal.regrowTimer -= dt;
+                if (crystal.regrowTimer <= 0) {
+                    crystal.amount += CONFIG.CRYSTAL_REGROW_RATE * dt;
+                    
+                    if (crystal.amount >= crystal.maxAmount * 0.3) {
+                        crystal.depleted = false;
+                        if (crystal.mesh) {
+                            crystal.mesh.setEnabled(true);
+                        }
+                    }
+                }
+            } else if (crystal.amount < crystal.maxAmount) {
+                crystal.amount = Math.min(crystal.maxAmount, crystal.amount + CONFIG.CRYSTAL_REGROW_RATE * dt * 0.3);
+            }
+        }
+    }
+
+    // ===== AI SYSTEM =====
+    class AIPlayer {
+        constructor(team) {
+            this.team = team;
+            this.lastAction = 0;
+            this.actionInterval = 2000 + Math.random() * 1000;
+            this.buildOrder = ['powerPlant', 'refinery', 'shipyard', 'supplyDepot'];
+            this.buildIndex = 0;
+        }
+        
+        update() {
+            const now = performance.now();
+            if (now - this.lastAction < this.actionInterval) return;
+            this.lastAction = now;
+            
+            const res = gameState.resources[this.team];
+            
+            // Find command center
+            const cc = entities.find(e => 
+                !e.dead && e.team === this.team && e.type === 'commandCenter'
+            );
+            if (!cc) return;
+            
+            // Build structures
+            if (this.buildIndex < this.buildOrder.length) {
+                const buildingType = this.buildOrder[this.buildIndex];
+                const buildingDef = BUILDINGS[buildingType];
+                
+                if (res.credits >= buildingDef.cost) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 30 + Math.random() * 20;
+                    const x = cc.mesh.position.x + Math.cos(angle) * dist;
+                    const z = cc.mesh.position.z + Math.sin(angle) * dist;
+                    
+                    const building = new Building(x, z, this.team, buildingType);
+                    res.credits -= buildingDef.cost;
+                    entities.push(building);
+                    this.buildIndex++;
+                }
+            }
+            
+            // Build units
+            const shipyard = entities.find(e => 
+                !e.dead && e.team === this.team && 
+                (e.type === 'shipyard' || e.type === 'advancedShipyard') &&
+                !e.isConstructing
+            );
+            
+            if (shipyard && shipyard.buildQueue.length < 3) {
+                const unitTypes = ['interceptor', 'striker', 'heavy'];
+                const randomUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
+                shipyard.queueUnit(randomUnit);
+            }
+            
+            // Build harvesters
+            if (cc && cc.buildQueue.length < 2) {
+                const harvesters = entities.filter(e => 
+                    !e.dead && e.team === this.team && e.type === 'harvester'
+                );
+                if (harvesters.length < 3) {
+                    cc.queueUnit('harvester');
+                }
+            }
+            
+            // Command idle military units
+            const militaryUnits = entities.filter(e => 
+                !e.dead && e.team === this.team && e.entityType === 'unit' && 
+                e.type !== 'harvester' && !e.attackTarget
+            );
+            
+            if (militaryUnits.length > 5 && Math.random() < 0.3) {
+                // Attack!
+                const targets = entities.filter(e => 
+                    !e.dead && isHostile(this.team, e.team)
+                );
+                
+                if (targets.length > 0) {
+                    const target = targets[Math.floor(Math.random() * targets.length)];
+                    for (const unit of militaryUnits) {
+                        unit.attackMove(target.mesh.position.x, target.mesh.position.z);
+                    }
+                }
+            }
+        }
+    }
+
+    const aiPlayers = [];
+    for (let t = 1; t < 1 + CONFIG.NUM_AI_PLAYERS; t++) {
+        aiPlayers.push(new AIPlayer(t));
+    }
+
+    // ===== MINIMAP =====
+    function setupMinimap() {
+        minimapCanvas = document.getElementById('minimapCanvas');
+        minimapCtx = minimapCanvas.getContext('2d');
+        minimapCanvas.width = 250;
+        minimapCanvas.height = 250;
+        
+        // Minimap click handling
+        minimapCanvas.addEventListener('click', (e) => {
+            const rect = minimapCanvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+            
+            // Convert to world coordinates
+            const worldX = (x - 0.5) * CONFIG.MAP_SIZE;
+            const worldZ = (y - 0.5) * CONFIG.MAP_SIZE;
+            
+            if (selectedEntities.length > 0) {
+                // Send selected units to that location
+                for (const ent of selectedEntities) {
+                    if (ent.entityType === 'unit' && ent.team === TEAMS.PLAYER) {
+                        ent.moveTo(worldX, worldZ);
+                    }
+                }
+            } else {
+                // Jump camera to that location
+                camera.target.x = worldX;
+                camera.target.z = worldZ;
+            }
+        });
+        
+        minimapCanvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = minimapCanvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+            
+            const worldX = (x - 0.5) * CONFIG.MAP_SIZE;
+            const worldZ = (y - 0.5) * CONFIG.MAP_SIZE;
+            
+            // Attack-move
+            if (selectedEntities.length > 0) {
+                for (const ent of selectedEntities) {
+                    if (ent.entityType === 'unit' && ent.team === TEAMS.PLAYER) {
+                        ent.attackMove(worldX, worldZ);
+                    }
+                }
+            }
+        });
+    }
+
+    function renderMinimap() {
+        const ctx = minimapCtx;
+        const w = minimapCanvas.width;
+        const h = minimapCanvas.height;
+        const mapScale = w / CONFIG.MAP_SIZE;
+        
+        // Clear
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, w, h);
+        
+        // Draw asteroid belt
+        ctx.strokeStyle = 'rgba(100, 80, 60, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, CONFIG.ASTEROID_BELT_INNER * mapScale, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, CONFIG.ASTEROID_BELT_OUTER * mapScale, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Draw ore nodes
+        for (const ore of oreNodes) {
+            if (ore.depleted) continue;
+            const mx = w/2 + ore.x * mapScale;
+            const my = h/2 + ore.z * mapScale;
+            const size = 2 + (ore.amount / ore.maxAmount) * 2;
+            
+            ctx.fillStyle = '#ff8844';
+            ctx.beginPath();
+            ctx.arc(mx, my, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw crystal nodes
+        for (const crystal of crystalNodes) {
+            if (crystal.depleted) continue;
+            const mx = w/2 + crystal.x * mapScale;
+            const my = h/2 + crystal.z * mapScale;
+            
+            ctx.fillStyle = '#ff00ff';
+            ctx.beginPath();
+            ctx.arc(mx, my, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw entities
+        for (const ent of entities) {
+            if (ent.dead) continue;
+            const mx = w/2 + ent.mesh.position.x * mapScale;
+            const my = h/2 + ent.mesh.position.z * mapScale;
+            const color = TEAM_COLORS[ent.team];
+            
+            ctx.fillStyle = `rgb(${color[0]*255}, ${color[1]*255}, ${color[2]*255})`;
+            
+            if (ent.entityType === 'building') {
+                ctx.fillRect(mx - 3, my - 3, 6, 6);
+            } else {
+                ctx.beginPath();
+                ctx.arc(mx, my, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Draw camera view
+        const camX = w/2 + camera.target.x * mapScale;
+        const camZ = h/2 + camera.target.z * mapScale;
+        const viewSize = 40;
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(camX - viewSize/2, camZ - viewSize/2, viewSize, viewSize);
+    }
+
+    // ===== UI =====
+    function setupUI() {
+        updatePlayerColor();
+        setupCommandButtons();
+        setupBuildMenu();
+    }
+
+    function updatePlayerColor() {
+        const color = TEAM_COLORS[TEAMS.PLAYER];
+        document.getElementById('playerColor').style.backgroundColor = 
+            `rgb(${color[0]*255}, ${color[1]*255}, ${color[2]*255})`;
+    }
+
+    function setupCommandButtons() {
+        const grid = document.getElementById('commandGrid');
+        const commands = [
+            { icon: '⟵', key: 'M', action: 'move', name: 'Move' },
+            { icon: '⚔', key: 'A', action: 'attack', name: 'Attack' },
+            { icon: '↯', key: 'A', action: 'attackMove', name: 'A-Move' },
+            { icon: '■', key: 'S', action: 'stop', name: 'Stop' },
+            { icon: '⬡', key: 'H', action: 'hold', name: 'Hold' },
+            { icon: '↻', key: 'P', action: 'patrol', name: 'Patrol' },
+            { icon: '🔨', key: 'B', action: 'build', name: 'Build' }
+        ];
+        
+        grid.innerHTML = commands.map(cmd => `
+            <button class="command-btn" data-action="${cmd.action}" title="${cmd.name}">
+                <span>${cmd.icon}</span>
+                <span class="hotkey">${cmd.key}</span>
+            </button>
+        `).join('');
+        
+        grid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.command-btn');
+            if (!btn) return;
+            
+            const action = btn.dataset.action;
+            handleCommand(action);
+        });
+    }
+
+    function setupBuildMenu() {
+        const buildingGrid = document.getElementById('buildingGrid');
+        const unitGrid = document.getElementById('unitGrid');
+        
+        // Buildings (excluding command center)
+        const buildableBuildings = Object.entries(BUILDINGS)
+            .filter(([key]) => key !== 'commandCenter');
+        
+        buildingGrid.innerHTML = buildableBuildings.map(([key, def]) => `
+            <button class="build-btn" data-type="${key}" data-category="building">
+                <span class="icon">${def.icon}</span>
+                <span class="cost">${def.cost}</span>
+            </button>
+        `).join('');
+        
+        buildingGrid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.build-btn');
+            if (!btn) return;
+            startBuildMode(btn.dataset.type);
+        });
+    }
+
+    function handleCommand(action) {
+        switch(action) {
+            case 'stop':
+                for (const ent of selectedEntities) {
+                    if (ent.stop) ent.stop();
+                }
+                break;
+            case 'hold':
+                for (const ent of selectedEntities) {
+                    if (ent.hold) ent.hold();
+                }
+                break;
+            case 'build':
+                toggleBuildMenu();
+                break;
+        }
+    }
+
+    function toggleBuildMenu() {
+        const menu = document.getElementById('buildMenu');
+        menu.classList.toggle('visible');
+    }
+
+    function startBuildMode(buildingType) {
+        const def = BUILDINGS[buildingType];
+        if (gameState.resources[TEAMS.PLAYER].credits < def.cost) {
+            showAlert('Insufficient credits', 'danger');
+            return;
+        }
+        
+        gameState.buildMode = buildingType;
+        document.getElementById('buildMenu').classList.remove('visible');
+        
+        // Create preview mesh
+        if (gameState.buildPreview) {
+            gameState.buildPreview.dispose();
+        }
+        
+        gameState.buildPreview = BABYLON.MeshBuilder.CreateCylinder('preview', {
+            height: 1,
+            diameter: def.size * 2.5,
+            tessellation: 32
+        }, scene);
+        gameState.buildPreview.position.y = 0.5;
+        
+        const previewMat = new BABYLON.StandardMaterial('previewMat', scene);
+        previewMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
+        previewMat.alpha = 0.3;
+        gameState.buildPreview.material = previewMat;
+    }
+
+    function cancelBuildMode() {
+        gameState.buildMode = null;
+        if (gameState.buildPreview) {
+            gameState.buildPreview.dispose();
+            gameState.buildPreview = null;
+        }
+    }
+
+    function showAlert(message, type = 'info') {
+        const container = document.getElementById('alertContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert ${type}`;
+        alert.textContent = message;
+        container.appendChild(alert);
+        
+        setTimeout(() => alert.remove(), 3000);
+    }
+
+    function updateUI() {
+        const res = gameState.resources[TEAMS.PLAYER];
+        
+        document.querySelector('#credits .resource-value').textContent = Math.floor(res.credits);
+        document.querySelector('#ore .resource-value').textContent = Math.floor(res.ore);
+        document.querySelector('#crystals .resource-value').textContent = Math.floor(res.crystals);
+        
+        // Calculate energy
+        let production = 0, drain = 0;
+        for (const ent of entities) {
+            if (ent.dead || ent.team !== TEAMS.PLAYER || ent.isConstructing) continue;
+            if (ent.entityType !== 'building') continue;
+            production += ent.def.energyProduction || 0;
+            drain += ent.def.energyDrain || 0;
+        }
+        res.energyProduction = production;
+        res.energyDrain = drain;
+        res.energy = production - drain;
+        
+        const energyEl = document.querySelector('#energy .resource-value');
+        energyEl.textContent = `${res.energy}`;
+        energyEl.style.color = res.energy < 0 ? '#f55' : '#0ff';
+        
+        // Calculate supply
+        let maxSupply = 0;
+        for (const ent of entities) {
+            if (ent.dead || ent.team !== TEAMS.PLAYER || ent.isConstructing) continue;
+            if (ent.entityType !== 'building') continue;
+            maxSupply += ent.def.supplyProvided || 0;
+        }
+        res.maxSupply = maxSupply;
+        
+        document.querySelector('#supply .resource-value').textContent = `${res.supply}/${res.maxSupply}`;
+        
+        // Game time
+        const minutes = Math.floor(gameState.gameTime / 60);
+        const seconds = Math.floor(gameState.gameTime % 60);
+        document.getElementById('gameTime').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Selection panel
+        updateSelectionPanel();
+    }
+
+    function updateSelectionPanel() {
+        const panel = document.getElementById('selectionPanel');
+        const cmdPanel = document.getElementById('commandPanel');
+        
+        if (selectedEntities.length === 0) {
+            panel.classList.remove('visible');
+            cmdPanel.classList.remove('visible');
+            return;
+        }
+        
+        panel.classList.add('visible');
+        cmdPanel.classList.add('visible');
+        
+        const first = selectedEntities[0];
+        const def = first.def;
+        
+        panel.querySelector('.selection-name').textContent = def.name;
+        panel.querySelector('.selection-count').textContent = 
+            selectedEntities.length > 1 ? `x${selectedEntities.length}` : '';
+        
+        // Health bar
+        const avgHealth = selectedEntities.reduce((sum, e) => sum + e.health / e.maxHealth, 0) / selectedEntities.length;
+        panel.querySelector('.health-bar').style.width = `${avgHealth * 100}%`;
+        
+        // Shield bar
+        if (first.maxShield > 0) {
+            const avgShield = selectedEntities.reduce((sum, e) => sum + (e.shield || 0) / (e.maxShield || 1), 0) / selectedEntities.length;
+            panel.querySelector('.shield-bar').style.width = `${avgShield * 100}%`;
+        } else {
+            panel.querySelector('.shield-bar').style.width = '0%';
+        }
+        
+        // Stats
+        const statsDiv = panel.querySelector('.selection-stats');
+        let statsHTML = '';
+        
+        if (first.entityType === 'unit') {
+            statsHTML = `
+                <div class="stat"><div class="stat-label">Speed</div>${def.speed}</div>
+                <div class="stat"><div class="stat-label">Damage</div>${def.damage || '-'}</div>
+                <div class="stat"><div class="stat-label">Range</div>${def.range || '-'}</div>
+            `;
+        } else {
+            if (first.buildQueue && first.buildQueue.length > 0) {
+                const building = first.buildQueue[0];
+                const progress = Math.floor(first.buildProgress * 100);
+                statsHTML = `
+                    <div class="stat" style="grid-column: span 3">
+                        <div class="stat-label">Building ${UNITS[building.type].name}</div>
+                        ${progress}%
+                    </div>
+                `;
+            }
+        }
+        
+        statsDiv.innerHTML = statsHTML;
+    }
+
+    // ===== INPUT =====
+    function setupInput() {
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            
+            // Control groups
+            if (e.ctrlKey && key >= '0' && key <= '9') {
+                controlGroups[key] = [...selectedEntities];
+                showAlert(`Group ${key} set`, 'info');
+                return;
+            }
+            
+            if (key >= '0' && key <= '9') {
+                if (controlGroups[key] && controlGroups[key].length > 0) {
+                    selectEntities(controlGroups[key].filter(e => !e.dead));
+                }
+                return;
+            }
+            
+            switch(key) {
+                case 'escape':
+                    cancelBuildMode();
+                    document.getElementById('buildMenu').classList.remove('visible');
+                    break;
+                case 'b':
+                    toggleBuildMenu();
+                    break;
+                case 's':
+                    handleCommand('stop');
+                    break;
+                case 'h':
+                    handleCommand('hold');
+                    break;
+                case 'a':
+                    // Attack-move mode (next click)
+                    gameState.attackMoveMode = true;
+                    break;
+                case ' ':
+                    // Center on selection
+                    if (selectedEntities.length > 0) {
+                        const center = selectedEntities.reduce((acc, e) => {
+                            acc.x += e.mesh.position.x;
+                            acc.z += e.mesh.position.z;
+                            return acc;
+                        }, { x: 0, z: 0 });
+                        center.x /= selectedEntities.length;
+                        center.z /= selectedEntities.length;
+                        camera.target.x = center.x;
+                        camera.target.z = center.z;
+                    }
+                    break;
+            }
+        });
+        
+        // Mouse
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let selectionBox = null;
+        
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left click
+                isDragging = true;
+                dragStart = { x: e.clientX, y: e.clientY };
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            // Update build preview position
+            if (gameState.buildMode && gameState.buildPreview) {
+                const pick = scene.pick(e.clientX, e.clientY);
+                if (pick.hit) {
+                    gameState.buildPreview.position.x = pick.pickedPoint.x;
+                    gameState.buildPreview.position.z = pick.pickedPoint.z;
+                    
+                    // Check if valid placement
+                    const canPlace = isValidBuildLocation(pick.pickedPoint.x, pick.pickedPoint.z);
+                    gameState.buildPreview.material.diffuseColor = canPlace 
+                        ? new BABYLON.Color3(0, 1, 0)
+                        : new BABYLON.Color3(1, 0, 0);
+                }
+            }
+            
+            // Selection box
+            if (isDragging) {
+                const dx = e.clientX - dragStart.x;
+                const dy = e.clientY - dragStart.y;
+                
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                    if (!selectionBox) {
+                        selectionBox = document.createElement('div');
+                        selectionBox.style.cssText = `
+                            position: absolute;
+                            border: 1px solid #0af;
+                            background: rgba(0, 170, 255, 0.1);
+                            pointer-events: none;
+                        `;
+                        document.body.appendChild(selectionBox);
+                    }
+                    
+                    selectionBox.style.left = Math.min(dragStart.x, e.clientX) + 'px';
+                    selectionBox.style.top = Math.min(dragStart.y, e.clientY) + 'px';
+                    selectionBox.style.width = Math.abs(dx) + 'px';
+                    selectionBox.style.height = Math.abs(dy) + 'px';
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseup', (e) => {
+            if (e.button === 0) {
+                if (selectionBox) {
+                    // Box select
+                    const x1 = Math.min(dragStart.x, e.clientX);
+                    const y1 = Math.min(dragStart.y, e.clientY);
+                    const x2 = Math.max(dragStart.x, e.clientX);
+                    const y2 = Math.max(dragStart.y, e.clientY);
+                    
+                    const selected = getEntitiesInScreenRect(x1, y1, x2, y2);
+                    selectEntities(selected);
+                    
+                    selectionBox.remove();
+                    selectionBox = null;
+                } else {
+                    // Single click
+                    handleLeftClick(e);
+                }
+                
+                isDragging = false;
+            }
+        });
+        
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            handleRightClick(e);
+        });
+    }
+
+    function handleLeftClick(e) {
+        if (gameState.buildMode) {
+            // Place building
+            const pick = scene.pick(e.clientX, e.clientY);
+            if (pick.hit && isValidBuildLocation(pick.pickedPoint.x, pick.pickedPoint.z)) {
+                const def = BUILDINGS[gameState.buildMode];
+                gameState.resources[TEAMS.PLAYER].credits -= def.cost;
+                
+                const building = new Building(pick.pickedPoint.x, pick.pickedPoint.z, TEAMS.PLAYER, gameState.buildMode);
+                entities.push(building);
+                
+                cancelBuildMode();
+            }
+            return;
+        }
+        
+        // Select entity
+        const pick = scene.pick(e.clientX, e.clientY);
+        if (pick.hit) {
+            const entity = getEntityAtPosition(pick.pickedPoint);
+            if (entity) {
+                selectEntities([entity]);
+            } else {
+                selectEntities([]);
+            }
+        }
+    }
+
+    function handleRightClick(e) {
+        if (selectedEntities.length === 0) return;
+        
+        const pick = scene.pick(e.clientX, e.clientY);
+        if (!pick.hit) return;
+        
+        const targetEntity = getEntityAtPosition(pick.pickedPoint);
+        
+        for (const ent of selectedEntities) {
+            if (ent.team !== TEAMS.PLAYER) continue;
+            
+            if (ent.entityType === 'unit') {
+                if (targetEntity) {
+                    if (targetEntity.team !== TEAMS.PLAYER && isHostile(TEAMS.PLAYER, targetEntity.team)) {
+                        // Attack
+                        ent.attack(targetEntity);
+                    } else if (ent.type === 'harvester' && (targetEntity.type === 'refinery' || targetEntity.x !== undefined)) {
+                        // Harvest or return to refinery
+                        if (targetEntity.isCrystal !== undefined) {
+                            ent.harvest(targetEntity);
+                        }
+                    }
+                } else {
+                    // Move or harvest ore
+                    const ore = getOreAtPosition(pick.pickedPoint);
+                    if (ore && ent.type === 'harvester') {
+                        ent.harvest(ore);
+                    } else if (gameState.attackMoveMode) {
+                        ent.attackMove(pick.pickedPoint.x, pick.pickedPoint.z);
+                        gameState.attackMoveMode = false;
+                    } else {
+                        ent.moveTo(pick.pickedPoint.x, pick.pickedPoint.z);
+                    }
+                }
+            } else if (ent.entityType === 'building' && ent.def.canBuild) {
+                // Set rally point
+                ent.rallyPoint = { x: pick.pickedPoint.x, z: pick.pickedPoint.z };
+            }
+        }
+    }
+
+    function getEntityAtPosition(pos) {
+        for (const ent of entities) {
+            if (ent.dead) continue;
+            const dist = Math.hypot(
+                ent.mesh.position.x - pos.x,
+                ent.mesh.position.z - pos.z
+            );
+            if (dist < ent.size + 5) return ent;
+        }
+        return null;
+    }
+
+    function getOreAtPosition(pos) {
+        for (const ore of [...oreNodes, ...crystalNodes]) {
+            if (ore.depleted) continue;
+            const dist = Math.hypot(ore.x - pos.x, ore.z - pos.z);
+            if (dist < ore.size + 5) return ore;
+        }
+        return null;
+    }
+
+    function getEntitiesInScreenRect(x1, y1, x2, y2) {
+        const selected = [];
+        
+        for (const ent of entities) {
+            if (ent.dead || ent.team !== TEAMS.PLAYER) continue;
+            
+            const screenPos = BABYLON.Vector3.Project(
+                ent.mesh.position,
+                BABYLON.Matrix.Identity(),
+                scene.getTransformMatrix(),
+                camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
+            );
+            
+            if (screenPos.x >= x1 && screenPos.x <= x2 && screenPos.y >= y1 && screenPos.y <= y2) {
+                selected.push(ent);
+            }
+        }
+        
+        // Prefer units over buildings
+        const units = selected.filter(e => e.entityType === 'unit');
+        return units.length > 0 ? units : selected;
+    }
+
+    function selectEntities(ents) {
+        // Clear old selection highlighting
+        for (const ent of selectedEntities) {
+            if (ent.mesh && ent.mesh.getChildMeshes) {
+                ent.mesh.getChildMeshes().forEach(m => {
+                    if (m.material) m.material.emissiveColor.scaleInPlace(0.5);
+                });
+            }
+        }
+        
+        selectedEntities = ents.filter(e => !e.dead);
+        
+        // Highlight new selection
+        for (const ent of selectedEntities) {
+            if (ent.mesh && ent.mesh.getChildMeshes) {
+                ent.mesh.getChildMeshes().forEach(m => {
+                    if (m.material) m.material.emissiveColor.scaleInPlace(2);
+                });
+            }
+        }
+        
+        updateSelectionPanel();
+        
+        // Update unit build grid if building selected
+        if (selectedEntities.length === 1 && selectedEntities[0].def.canBuild) {
+            updateUnitBuildGrid(selectedEntities[0]);
+        }
+    }
+
+    function updateUnitBuildGrid(building) {
+        const unitGrid = document.getElementById('unitGrid');
+        const canBuild = building.def.canBuild || [];
+        
+        unitGrid.innerHTML = canBuild.map(unitType => {
+            const def = UNITS[unitType];
+            return `
+                <button class="build-btn" data-type="${unitType}" data-category="unit">
+                    <span class="icon">${def.icon}</span>
+                    <span class="cost">${def.cost}</span>
+                </button>
+            `;
+        }).join('');
+        
+        unitGrid.onclick = (e) => {
+            const btn = e.target.closest('.build-btn');
+            if (!btn) return;
+            building.queueUnit(btn.dataset.type);
+        };
+    }
+
+    function isValidBuildLocation(x, z) {
+        // Check build range from existing buildings
+        let nearFriendly = false;
+        for (const ent of entities) {
+            if (ent.dead || ent.entityType !== 'building') continue;
+            
+            const dist = Math.hypot(ent.mesh.position.x - x, ent.mesh.position.z - z);
+            
+            // Too close to any building
+            if (dist < ent.size + BUILDINGS[gameState.buildMode].size + 5) {
+                return false;
+            }
+            
+            // Check if near friendly building
+            if (ent.team === TEAMS.PLAYER && dist < CONFIG.BUILD_RANGE) {
+                nearFriendly = true;
+            }
+        }
+        
+        // Check asteroid belt
+        if (isInAsteroidBelt(x, z)) {
+            return false;
+        }
+        
+        return nearFriendly;
+    }
+
+    // ===== GAME LOGIC =====
+    function update(dt) {
+        gameState.gameTime += dt;
+        
+        // Update asteroids
+        for (const asteroid of asteroids) {
+            asteroid.mesh.rotation.addInPlace(asteroid.rotSpeed);
+        }
+        
+        // Update ore regrowth
+        updateOreRegrowth(dt);
+        
+        // Update entities
+        for (const ent of entities) {
+            if (!ent.dead) {
+                ent.update(dt);
+            }
+        }
+        
+        // Update projectiles and particles
+        updateProjectiles(dt);
+        updateParticles(dt);
+        
+        // Update AI
+        for (const ai of aiPlayers) {
+            ai.update();
+        }
+        
+        // Update UI
+        updateUI();
+        
+        // Clean up dead entities
+        entities = entities.filter(e => !e.dead);
+    }
+
+    function checkGameEnd() {
+        // Check if player has any buildings
+        const playerBuildings = entities.filter(e => 
+            !e.dead && e.team === TEAMS.PLAYER && e.entityType === 'building'
+        );
+        
+        if (playerBuildings.length === 0) {
+            endGame(false);
+            return;
+        }
+        
+        // Check if all enemies defeated
+        let enemiesRemain = false;
+        for (let t = 1; t < 4; t++) {
+            const enemyBuildings = entities.filter(e => 
+                !e.dead && e.team === t && e.entityType === 'building'
+            );
+            if (enemyBuildings.length > 0) {
+                enemiesRemain = true;
+                break;
+            }
+        }
+        
+        if (!enemiesRemain) {
+            endGame(true);
+        }
+    }
+
+    function endGame(victory) {
+        gameState.running = false;
+        
+        const screen = document.getElementById('gameOverScreen');
+        document.getElementById('gameOverTitle').textContent = victory ? 'VICTORY' : 'DEFEAT';
+        screen.className = `game-over-screen ${victory ? 'victory' : 'defeat'}`;
+        
+        const minutes = Math.floor(gameState.gameTime / 60);
+        const seconds = Math.floor(gameState.gameTime % 60);
+        document.getElementById('finalTime').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        document.getElementById('finalUnits').textContent = gameState.stats[TEAMS.PLAYER].unitsBuilt;
+        document.getElementById('finalLost').textContent = gameState.stats[TEAMS.PLAYER].unitsLost;
+        document.getElementById('finalKills').textContent = gameState.stats[TEAMS.PLAYER].enemyKilled;
+        
+        screen.style.display = 'flex';
+    }
+
+    // Start the game
+    init();
+    </script>
+</body>
+</html>
