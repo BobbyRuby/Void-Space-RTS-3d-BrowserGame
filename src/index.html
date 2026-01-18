@@ -158,6 +158,11 @@
             border: 1px solid #f33;
         }
 
+        .alert-warning {
+            background: rgba(255,150,0,0.8);
+            border: 1px solid #fa0;
+        }
+
         @keyframes slideIn {
             from { transform: translateY(-20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -262,6 +267,23 @@
             z-index: 50;
             box-shadow: 0 0 10px rgba(0, 170, 255, 0.5), inset 0 0 20px rgba(0, 170, 255, 0.1);
         }
+
+        /* Bottom Bar Container - Holds all bottom UI panels */
+        #bottomBar {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 270px;  /* Stop before minimap (250px + 10px gap + 10px margin) */
+            height: 90px;
+            display: flex;
+            gap: 10px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #bottomBar > * {
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
@@ -318,6 +340,9 @@
             <span id="minimapLabel">Tactical Map</span>
             <canvas id="minimapCanvas"></canvas>
         </div>
+
+        <!-- Bottom Bar Container for UI Panels -->
+        <div id="bottomBar"></div>
     </div>
 
     <!-- Game Over Screen -->

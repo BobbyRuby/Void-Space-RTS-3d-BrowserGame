@@ -146,12 +146,18 @@ export class SelectionSystem {
         for (const unit of units) {
             unit.moveTo(x, z);
         }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'move' });
+        }
     }
 
     commandAttackMove(x, z) {
         const units = this.getSelectedUnits();
         for (const unit of units) {
             unit.attackMove(x, z);
+        }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'attackMove' });
         }
     }
 
@@ -162,6 +168,9 @@ export class SelectionSystem {
                 unit.attack(target);
             }
         }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'attack' });
+        }
     }
 
     commandStop() {
@@ -169,12 +178,18 @@ export class SelectionSystem {
         for (const unit of units) {
             unit.stop();
         }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'stop' });
+        }
     }
 
     commandHold() {
         const units = this.getSelectedUnits();
         for (const unit of units) {
             unit.hold();
+        }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'hold' });
         }
     }
 
@@ -188,12 +203,18 @@ export class SelectionSystem {
                 { x, z }
             ]);
         }
+        if (units.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'patrol' });
+        }
     }
 
     commandHarvest(oreNode) {
         const harvesters = this.getSelectedHarvesters();
         for (const harvester of harvesters) {
             harvester.harvest(oreNode);
+        }
+        if (harvesters.length > 0) {
+            eventBus.emit(GameEvents.COMMAND_COMPLETE, { command: 'harvest' });
         }
     }
 
