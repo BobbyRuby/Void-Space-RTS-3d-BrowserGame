@@ -341,7 +341,8 @@ export class BuildMenu {
             { type: 'shipyard', icon: '🚀', name: 'Shipyard', desc: 'Produces basic combat units', hotkey: 'R' },
             { type: 'advancedShipyard', icon: '🛸', name: 'Adv. Shipyard', desc: 'Produces advanced warships', hotkey: 'T' },
             { type: 'turret', icon: '🔫', name: 'Turret', desc: 'Defensive weapon platform', hotkey: 'Y' },
-            { type: 'radar', icon: '📡', name: 'Radar', desc: 'Reveals large area of map', hotkey: 'U' }
+            { type: 'radar', icon: '📡', name: 'Radar', desc: 'Reveals large area of map', hotkey: 'U' },
+            { type: 'forceFieldGenerator', icon: '🛡️', name: 'Force Field', desc: 'Creates barriers between generators', hotkey: 'I' }
         ];
 
         for (const building of buildings) {
