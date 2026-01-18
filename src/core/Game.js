@@ -123,6 +123,9 @@ export class Game {
         // Calculate initial resources
         this.updateResourceCapacity();
 
+        // Notify UI that resources/buildings are ready (fixes BuildMenu seeing empty state at init)
+        eventBus.emit(GameEvents.RESOURCE_CHANGED, { team: TEAMS.PLAYER });
+
         this.updateLoadingProgress(100, 'Ready!');
         this.initialized = true;
 
