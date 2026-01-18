@@ -107,6 +107,9 @@ export class Building extends Entity {
             case 'radar':
                 this.createRadar(color, scene);
                 break;
+            case 'forceFieldGenerator':
+                this.createForceFieldGenerator(color, scene);
+                break;
             default:
                 this.createGenericBuilding(color, scene);
         }
@@ -457,6 +460,80 @@ export class Building extends Entity {
         dish.material = MaterialPool.getTeamMaterial(this.team, 'base');
     }
 
+    createForceFieldGenerator(color, scene) {
+        const parent = this.mesh;
+
+        // Base platform - hexagonal
+        const base = BABYLON.MeshBuilder.CreateCylinder('base', {
+            height: 2,
+            diameter: this.size * 2,
+            tessellation: 6
+        }, scene);
+        base.parent = parent;
+        base.position.y = 1;
+        base.material = MaterialPool.getTeamMaterial(this.team, 'metallic');
+
+        // Pylon legs (3)
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            const legX = Math.cos(angle) * 3;
+            const legZ = Math.sin(angle) * 3;
+
+            const leg = BABYLON.MeshBuilder.CreateCylinder('leg' + i, {
+                height: 10,
+                diameterTop: 0.8,
+                diameterBottom: 1.2,
+                tessellation: 6
+            }, scene);
+            leg.parent = parent;
+            leg.position.set(legX, 6, legZ);
+            leg.material = MaterialPool.getTeamMaterial(this.team, 'base');
+        }
+
+        // Central energy conduit
+        const conduit = BABYLON.MeshBuilder.CreateCylinder('conduit', {
+            height: 12,
+            diameter: 1.5,
+            tessellation: 8
+        }, scene);
+        conduit.parent = parent;
+        conduit.position.y = 7;
+        conduit.material = MaterialPool.getTeamMaterial(this.team, 'metallic');
+
+        // Top platform
+        const topPlatform = BABYLON.MeshBuilder.CreateCylinder('topPlatform', {
+            height: 1,
+            diameter: 5,
+            tessellation: 6
+        }, scene);
+        topPlatform.parent = parent;
+        topPlatform.position.y = 12;
+        topPlatform.material = MaterialPool.getTeamMaterial(this.team, 'base');
+
+        // Energy orb at top (emissive glow)
+        const orb = BABYLON.MeshBuilder.CreateSphere('energyOrb', {
+            diameter: 3,
+            segments: 12
+        }, scene);
+        orb.parent = parent;
+        orb.position.y = 15;
+        orb.material = MaterialPool.getTeamMaterial(this.team, 'glow');
+
+        // Store reference to orb for pulsing animation
+        this.energyOrb = orb;
+
+        // Energy ring around orb
+        const ring = BABYLON.MeshBuilder.CreateTorus('energyRing', {
+            diameter: 5,
+            thickness: 0.3,
+            tessellation: 24
+        }, scene);
+        ring.parent = parent;
+        ring.position.y = 15;
+        ring.material = MaterialPool.getTeamMaterial(this.team, 'glow');
+        this.energyRing = ring;
+    }
+
     createGenericBuilding(color, scene) {
         const box = BABYLON.MeshBuilder.CreateBox('building', {
             width: this.size,
@@ -529,7 +606,7 @@ export class Building extends Entity {
         // Turret combat
         if (this.type === 'turret' && !this.isConstructing) {
             const target = this.findTarget();
-            if (target) {
+            if (target && target.mesh) {
                 // Rotate turret to face target (if turretHead exists)
                 if (this.turretHead) {
                     const dx = target.mesh.position.x - this.mesh.position.x;
@@ -550,6 +627,22 @@ export class Building extends Entity {
         // Radar rotation
         if (this.type === 'radar' && this.turretHead) {
             this.turretHead.rotation.y += dt * 0.5;
+        }
+
+        // Force field generator animation
+        if (this.type === 'forceFieldGenerator' && !this.isConstructing) {
+            const time = performance.now() * 0.001;
+
+            // Pulsing energy orb
+            if (this.energyOrb) {
+                const pulse = 0.9 + 0.1 * Math.sin(time * 3);
+                this.energyOrb.scaling.setAll(pulse);
+            }
+
+            // Rotating energy ring
+            if (this.energyRing) {
+                this.energyRing.rotation.y += dt * 2;
+            }
         }
     }
 

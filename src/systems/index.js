@@ -10,3 +10,4 @@ export { SelectionSystem, selectionSystem } from './SelectionSystem.js';
 export { FogOfWar, fogOfWar, Visibility } from './FogOfWar.js';
 export { Pathfinding, pathfinding } from './Pathfinding.js';
 export { FormationSystem, formationSystem, Formation, FormationType } from './FormationSystem.js';
+export { ForceFieldSystem, forceFieldSystem } from './ForceFieldSystem.js';

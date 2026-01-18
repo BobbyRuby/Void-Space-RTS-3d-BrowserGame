@@ -8,6 +8,7 @@ import { TEAM_COLORS, WEAPON_TYPES, UNITS, BUILDINGS } from '../core/Config.js';
 import { eventBus, GameEvents } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
 import { MaterialPool } from '../core/MaterialPool.js';
+import { forceFieldSystem } from './ForceFieldSystem.js';
 
 export class CombatSystem {
     constructor() {
@@ -254,6 +255,11 @@ export class CombatSystem {
     createProjectile(data) {
         const { shooter, target, startPos, damage, splash = 0, hardpointWeapon, hardpointOffset } = data;
 
+        // Guard: skip if target is invalid (dead, disposed, or undefined)
+        if (!target || !target.mesh || !target.mesh.position) {
+            return;
+        }
+
         const weaponDef = this.getWeaponType(shooter, hardpointWeapon);
         const teamColor = TEAM_COLORS[shooter.team];
         const color = this.getWeaponColor(weaponDef, teamColor);
@@ -404,7 +410,30 @@ export class CombatSystem {
     }
 
     createBeam(startPos, target, damage, splash, team, color, weaponDef, weaponType) {
-        const targetPos = target.mesh.position.clone();
+        // Guard: skip if target is invalid (dead, disposed, or undefined)
+        if (!target || !target.mesh || !target.mesh.position) {
+            return;
+        }
+
+        let targetPos = target.mesh.position.clone();
+        let actualTarget = target;
+        let hitForceField = false;
+
+        // Check for force field collision
+        const fieldHit = forceFieldSystem.checkProjectileCollision(
+            { team },
+            startPos,
+            targetPos
+        );
+
+        if (fieldHit) {
+            // Beam hits force field instead of target
+            targetPos = fieldHit.intersection;
+            actualTarget = null;
+            hitForceField = true;
+            forceFieldSystem.damageSegment(fieldHit.segment, damage, { team });
+        }
+
         const distance = BABYLON.Vector3.Distance(startPos, targetPos);
 
         const beam = BABYLON.MeshBuilder.CreateCylinder('beam', {
@@ -421,24 +450,24 @@ export class CombatSystem {
         // Use MaterialPool
         beam.material = MaterialPool.getBeamMaterial(weaponType, team);
 
-        // Apply damage immediately
-        if (target && !target.dead) {
+        // Apply damage immediately (only if not blocked by force field)
+        if (!hitForceField && actualTarget && !actualTarget.dead) {
             if (splash > 0) {
                 // Use spatial grid for efficient splash damage lookup (O(k) vs O(n))
                 const nearbyEntities = gameState.queryNearbyEntities(
-                    targetPos.x, targetPos.z, splash,
+                    actualTarget.mesh.position.x, actualTarget.mesh.position.z, splash,
                     ent => !ent.dead && ent.team !== team
                 );
                 for (const ent of nearbyEntities) {
                     const dist = Math.hypot(
-                        ent.mesh.position.x - targetPos.x,
-                        ent.mesh.position.z - targetPos.z
+                        ent.mesh.position.x - actualTarget.mesh.position.x,
+                        ent.mesh.position.z - actualTarget.mesh.position.z
                     );
                     const falloff = 1 - (dist / splash);
                     ent.takeDamage(damage * falloff, { team: team });
                 }
             } else {
-                target.takeDamage(damage, { team: team });
+                actualTarget.takeDamage(damage, { team: team });
             }
         }
 
@@ -547,15 +576,43 @@ export class CombatSystem {
     updateProjectiles(dt) {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
+            const prevProgress = proj.progress;
             proj.progress += dt * proj.speed;
 
             let targetPos = proj.targetPos;
-            if (proj.homing && proj.target && !proj.target.dead) {
+            if (proj.homing && proj.target && proj.target.mesh && !proj.target.dead) {
                 targetPos = proj.target.mesh.position.clone();
                 proj.targetPos = targetPos;
             }
 
+            const prevPos = BABYLON.Vector3.Lerp(proj.start, targetPos, prevProgress);
             proj.mesh.position = BABYLON.Vector3.Lerp(proj.start, targetPos, proj.progress);
+
+            // Check for force field collision
+            const fieldHit = forceFieldSystem.checkProjectileCollision(
+                proj,
+                prevPos,
+                proj.mesh.position
+            );
+
+            if (fieldHit) {
+                // Projectile hit a force field - damage the field and destroy projectile
+                forceFieldSystem.damageSegment(fieldHit.segment, proj.damage, { team: proj.team });
+
+                eventBus.emit(GameEvents.COMBAT_PROJECTILE_HIT, {
+                    projectile: proj,
+                    position: fieldHit.intersection,
+                    weaponType: proj.weaponType
+                });
+
+                // Cleanup
+                proj.mesh.dispose();
+                if (proj.trail && proj.trail.mesh) {
+                    proj.trail.mesh.dispose();
+                }
+                this.projectiles.splice(i, 1);
+                continue;
+            }
 
             if (proj.weaponDef.sound === 'missile') {
                 const direction = targetPos.subtract(proj.start).normalize();

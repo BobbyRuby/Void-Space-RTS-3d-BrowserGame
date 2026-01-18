@@ -251,7 +251,13 @@ export const GameEvents = {
 
     // Rally point events
     RALLY_POINT_SET: 'rally:point:set',
-    RALLY_POINT_CLEAR: 'rally:point:clear'
+    RALLY_POINT_CLEAR: 'rally:point:clear',
+
+    // Force field events
+    FORCE_FIELD_CREATED: 'forcefield:created',
+    FORCE_FIELD_DESTROYED: 'forcefield:destroyed',
+    FORCE_FIELD_DAMAGED: 'forcefield:damaged',
+    FORCE_FIELD_REGENERATED: 'forcefield:regenerated'
 };
 
 // Create singleton instance

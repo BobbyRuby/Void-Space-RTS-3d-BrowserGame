@@ -304,6 +304,21 @@ export const BUILDINGS = {
         buildTime: 20,
         sensorRange: 200,
         color: [0.3, 0.7, 0.7]
+    },
+    forceFieldGenerator: {
+        name: 'Force Field Generator',
+        icon: '🛡️',
+        size: 6,
+        maxHealth: 800,
+        cost: 400,
+        energyDrain: 8,
+        buildTime: 25,
+        maxRange: 100,        // Max distance to connect to another generator
+        fieldHealth: 2000,    // Health of field segment between generators
+        fieldWidth: 4,        // Width of field segment for collision
+        fieldRegen: 5,        // HP/s regeneration when not taking damage
+        fieldRegenDelay: 10,  // Seconds before regeneration after damage
+        color: [0.2, 0.5, 0.8]
     }
 };
 

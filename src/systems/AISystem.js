@@ -220,7 +220,9 @@ class AIPlayer {
                 });
 
                 for (const unit of militaryUnits) {
-                    unit.attackMove(target.mesh.position.x, target.mesh.position.z);
+                    if (target.mesh) {
+                        unit.attackMove(target.mesh.position.x, target.mesh.position.z);
+                    }
                 }
             }
         }

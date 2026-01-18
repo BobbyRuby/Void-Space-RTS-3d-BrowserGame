@@ -134,7 +134,7 @@ export class AlienUnit extends Unit {
 
             if (hostileToSomeone) {
                 const target = this.findTarget();
-                if (target) {
+                if (target && target.mesh) {
                     const targetDist = Math.hypot(
                         target.mesh.position.x - this.homeX,
                         target.mesh.position.z - this.homeZ

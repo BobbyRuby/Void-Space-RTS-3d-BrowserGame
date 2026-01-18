@@ -10,6 +10,7 @@ import { eventBus, GameEvents } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
 import { MaterialPool } from '../core/MaterialPool.js';
 import { LODManager } from '../rendering/LODManager.js';
+import { forceFieldSystem } from '../systems/ForceFieldSystem.js';
 
 export class Unit extends Entity {
     constructor(x, z, team, type, scene) {
@@ -470,8 +471,19 @@ export class Unit extends Entity {
             const moveSpeed = this.speed * dt;
             const moveDist = Math.min(moveSpeed, dist);
 
-            this.mesh.position.x += (dx / dist) * moveDist;
-            this.mesh.position.z += (dz / dist) * moveDist;
+            // Calculate new position
+            const newX = this.mesh.position.x + (dx / dist) * moveDist;
+            const newZ = this.mesh.position.z + (dz / dist) * moveDist;
+
+            // Check for force field collision
+            const blocked = forceFieldSystem.checkUnitCollision(this, { x: newX, z: newZ });
+            if (blocked) {
+                // Stop at the field boundary - don't move
+                return;
+            }
+
+            this.mesh.position.x = newX;
+            this.mesh.position.z = newZ;
 
             // Face movement direction
             this.mesh.rotation.y = Math.atan2(dx, dz);
@@ -524,6 +536,8 @@ export class Unit extends Entity {
     patrol(points) {
         this.patrolPoints = points;
         this.patrolIndex = 0;
+        this.attackTarget = null;
+        this.isAttackMoving = false;
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,

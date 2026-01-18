@@ -20,6 +20,7 @@ import { selectionSystem } from '../systems/SelectionSystem.js';
 import { fogOfWar } from '../systems/FogOfWar.js';
 import { pathfinding } from '../systems/Pathfinding.js';
 import { formationSystem } from '../systems/FormationSystem.js';
+import { forceFieldSystem } from '../systems/ForceFieldSystem.js';
 import { inputManager } from '../input/InputManager.js';
 import { minimap } from '../ui/Minimap.js';
 import { mainPanel } from '../ui/MainPanel.js';
@@ -69,11 +70,12 @@ export class Game {
         selectionSystem.init();
         aiSystem.init();
 
-        // Initialize pathfinding and fog of war
+        // Initialize pathfinding, fog of war, and force fields
         this.updateLoadingProgress(35, 'Initializing navigation...');
         pathfinding.init();
         fogOfWar.init(scene);
         formationSystem.init();
+        forceFieldSystem.init(scene);
 
         // Initialize audio
         this.updateLoadingProgress(45, 'Loading audio...');
@@ -553,6 +555,9 @@ export class Game {
         pathfinding.updateFromGameState();
         formationSystem.update(dt);
 
+        // Update force field system
+        forceFieldSystem.update(dt);
+
         // Update fog of war
         fogOfWar.update();
         fogOfWar.updateEntityVisibility();
@@ -678,6 +683,7 @@ export class Game {
         fogOfWar.dispose();
         pathfinding.dispose();
         formationSystem.dispose();
+        forceFieldSystem.dispose();
         inputManager.dispose();
         minimap.dispose();
         buildMenu.dispose();
