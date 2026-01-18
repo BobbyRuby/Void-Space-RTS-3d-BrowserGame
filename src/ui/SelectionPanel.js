@@ -358,6 +358,12 @@ export class SelectionPanel {
                 align-items: center;
                 justify-content: center;
                 font-size: 14px;
+                transition: all 0.15s;
+            }
+
+            .production-icon:hover {
+                border-color: #f44;
+                background: rgba(200, 50, 50, 0.3);
             }
 
             .production-progress {
@@ -563,24 +569,40 @@ export class SelectionPanel {
         const current = queue[0];
 
         // Update current production
+        const prodIconEl = document.getElementById('prodIcon');
+        const prodNameEl = document.getElementById('prodName');
+
         if (current && current.type) {
             const config = UNITS[current.type];
             if (config) {
-                document.getElementById('prodIcon').textContent = this.getUnitIcon(current.type);
-                document.getElementById('prodName').textContent = config.name || this.formatName(current.type);
+                prodIconEl.textContent = this.getUnitIcon(current.type);
+                prodNameEl.textContent = config.name || this.formatName(current.type);
 
                 // buildProgress is stored on the building itself (0-1 range)
                 const progress = (building.buildProgress || 0) * 100;
                 document.getElementById('prodProgressFill').style.width = `${Math.min(100, progress)}%`;
             } else {
-                document.getElementById('prodIcon').textContent = '❓';
-                document.getElementById('prodName').textContent = this.formatName(current.type);
+                prodIconEl.textContent = '❓';
+                prodNameEl.textContent = this.formatName(current.type);
                 document.getElementById('prodProgressFill').style.width = '0%';
             }
+
+            // Make current item clickable to cancel
+            prodIconEl.style.cursor = 'pointer';
+            prodIconEl.title = 'Click to cancel current production';
+            prodIconEl.onclick = () => {
+                eventBus.emit(GameEvents.PRODUCTION_CANCEL, {
+                    building,
+                    index: 0
+                });
+            };
         } else {
-            document.getElementById('prodIcon').textContent = '-';
-            document.getElementById('prodName').textContent = 'None';
+            prodIconEl.textContent = '-';
+            prodNameEl.textContent = 'None';
             document.getElementById('prodProgressFill').style.width = '0%';
+            prodIconEl.style.cursor = 'default';
+            prodIconEl.title = '';
+            prodIconEl.onclick = null;
         }
 
         // Update queue

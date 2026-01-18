@@ -249,6 +249,14 @@ export class Game {
             }
         });
 
+        // Handle production cancellation
+        eventBus.on(GameEvents.PRODUCTION_CANCEL, (data) => {
+            const { building, index } = data;
+            if (building && typeof building.cancelProduction === 'function') {
+                building.cancelProduction(index);
+            }
+        });
+
         // Handle auto-defense: nearby units engage attackers when buildings take damage
         eventBus.on(GameEvents.ENTITY_DAMAGED, (data) => {
             const { entity, attacker } = data;

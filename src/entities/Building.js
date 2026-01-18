@@ -688,6 +688,36 @@ export class Building extends Entity {
         return true;
     }
 
+    cancelProduction(index = 0) {
+        if (index < 0 || index >= this.buildQueue.length) return false;
+
+        const item = this.buildQueue[index];
+        if (!item) return false;
+
+        const unitDef = UNITS[item.type];
+        if (!unitDef) return false;
+
+        // Refund cost
+        const cost = typeof unitDef.cost === 'number' ? unitDef.cost : (unitDef.cost?.credits || 0);
+        gameState.modifyResource(this.team, 'credits', cost);
+
+        // Remove from queue
+        this.buildQueue.splice(index, 1);
+
+        // Reset progress if cancelling current item
+        if (index === 0) {
+            this.buildProgress = 0;
+        }
+
+        eventBus.emit(GameEvents.UI_ALERT, {
+            message: `${unitDef.name} cancelled (+${cost} credits)`,
+            type: 'info',
+            team: this.team
+        });
+
+        return true;
+    }
+
     spawnUnit(unitType) {
         const unitDef = UNITS[unitType];
         const angle = Math.random() * Math.PI * 2;
