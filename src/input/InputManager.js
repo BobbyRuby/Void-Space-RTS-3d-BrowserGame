@@ -19,6 +19,7 @@ export class InputManager {
         this.dragStart = null;
         this.dragEnd = null;
         this.wasBoxSelect = false;
+        this.clickCount = 0;  // Debug counter
         this.mouseX = 0;
         this.mouseY = 0;
 
@@ -233,14 +234,17 @@ export class InputManager {
     // ===== Mouse Input =====
 
     onClick(e) {
-        console.log('onClick ENTRY - buildMode:', gameState.buildMode, 'target:', e.target.tagName, e.target.id);
+        this.clickCount++;
+        console.log('onClick ENTRY #' + this.clickCount + ' - buildMode:', gameState.buildMode, 'target:', e.target.tagName, e.target.id, 'time:', Date.now());
 
         // Check if we were box-selecting
+        console.log('onClick #' + this.clickCount + ': wasBoxSelect =', this.wasBoxSelect);
         if (this.wasBoxSelect) {
             this.wasBoxSelect = false;
-            console.log('onClick: was box-select, returning');
+            console.log('onClick: was box-select, returning early');
             return;
         }
+        console.log('onClick: NOT a box-select, proceeding to emit INPUT_CLICK');
 
         const entity = sceneManager.pickEntity(e.clientX, e.clientY, gameState.entities);
         const worldPos = sceneManager.getWorldPosition(e.clientX, e.clientY);
@@ -564,6 +568,7 @@ export class InputManager {
             const dy = Math.abs(this.dragEnd.y - this.dragStart.y);
 
             if (dx > 5 || dy > 5) {
+                console.log('onMouseUp: SETTING wasBoxSelect = true (dx=' + dx + ', dy=' + dy + ') time:', Date.now());
                 this.wasBoxSelect = true;  // Flag to prevent onClick from clearing selection
                 const startWorld = sceneManager.getWorldPosition(this.dragStart.x, this.dragStart.y);
                 const endWorld = sceneManager.getWorldPosition(this.dragEnd.x, this.dragEnd.y);
@@ -586,6 +591,7 @@ export class InputManager {
 
             // Clear drag start after processing
             this.dragStart = null;
+            console.log('onMouseUp END: wasBoxSelect =', this.wasBoxSelect, 'time:', Date.now());
         }
     }
 
