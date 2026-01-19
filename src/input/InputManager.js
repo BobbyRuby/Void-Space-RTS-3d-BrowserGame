@@ -38,6 +38,7 @@ export class InputManager {
     }
 
     init(canvas) {
+        console.log('InputManager.init called with canvas:', canvas, canvas?.id);
         this.canvas = canvas;
 
         // Get selection box element (or create if missing)
@@ -66,9 +67,22 @@ export class InputManager {
         canvas.addEventListener('click', (e) => this.onClick(e));
         canvas.addEventListener('dblclick', (e) => this.onDoubleClick(e));
         canvas.addEventListener('contextmenu', (e) => this.onRightClick(e));
-        canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        // Use capture phase to ensure we get events before BabylonJS
+        canvas.addEventListener('mousedown', (e) => this.onMouseDown(e), true);
+        canvas.addEventListener('mouseup', (e) => this.onMouseUp(e), true);
+        canvas.addEventListener('mousemove', (e) => this.onMouseMove(e), true);
+
+        // Debug: Add a raw test listener
+        canvas.addEventListener('mousedown', (e) => {
+            console.log('RAW mousedown on canvas:', e.button, e.target.tagName);
+        }, true);
+
+        console.log('InputManager: All event listeners attached to canvas');
+
+        // Debug: Also listen on document to see if events are happening at all
+        document.addEventListener('mousedown', (e) => {
+            console.log('DOCUMENT mousedown:', e.target.tagName, e.target.id);
+        }, true);
 
         // Prevent default context menu
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -494,6 +508,8 @@ export class InputManager {
     }
 
     onMouseDown(e) {
+        console.log('MouseDown ENTRY:', e.button, e.target.id); // Debug at entry
+
         if (e.button === 0) { // Left button
             // Don't start drag if in build mode (placing buildings)
             if (gameState.buildMode) {
