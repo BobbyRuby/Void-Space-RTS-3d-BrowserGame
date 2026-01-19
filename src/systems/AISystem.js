@@ -206,7 +206,7 @@ class AIPlayer {
             now
         );
 
-        if (militaryUnits.length > 5 && Math.random() < this.aggressionLevel) {
+        if (militaryUnits.length > 0 && Math.random() < this.aggressionLevel) {
             // Use cached hostile entities
             const targets = this.getCached(
                 'hostileEntities',

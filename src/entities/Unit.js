@@ -696,6 +696,11 @@ export class Unit extends Entity {
             gameState.provoke(attacker.team, this.team);
         }
 
+        // Auto-retaliate if we don't have a target
+        if (!this.attackTarget && attacker && !attacker.dead) {
+            this.attackTarget = attacker;
+        }
+
         eventBus.emit(GameEvents.ENTITY_DAMAGED, {
             entity: this,
             amount,
