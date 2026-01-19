@@ -343,12 +343,12 @@ export class CommandPanel {
     // ===== Command Handlers =====
 
     startMoveCommand() {
-        this.setCommandMode(CommandType.MOVE);
+        eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, { mode: 'move' });
         document.body.classList.add('cursor-move');
     }
 
     startAttackCommand() {
-        this.setCommandMode(CommandType.ATTACK);
+        eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, { mode: 'attack' });
         document.body.classList.add('cursor-attack');
     }
 
@@ -379,17 +379,17 @@ export class CommandPanel {
     }
 
     startPatrolCommand() {
-        this.setCommandMode(CommandType.PATROL);
+        eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, { mode: 'patrol' });
         document.body.classList.add('cursor-patrol');
     }
 
     startGuardCommand() {
-        this.setCommandMode(CommandType.GUARD);
+        eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, { mode: 'guard' });
         document.body.classList.add('cursor-guard');
     }
 
     startHarvestCommand() {
-        this.setCommandMode(CommandType.HARVEST);
+        eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, { mode: 'harvest' });
         document.body.classList.add('cursor-harvest');
     }
 
