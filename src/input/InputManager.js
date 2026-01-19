@@ -18,6 +18,7 @@ export class InputManager {
         this.isDragging = false;
         this.dragStart = null;
         this.dragEnd = null;
+        this.wasBoxSelect = false;
         this.mouseX = 0;
         this.mouseY = 0;
 
@@ -234,15 +235,11 @@ export class InputManager {
     onClick(e) {
         console.log('onClick ENTRY - buildMode:', gameState.buildMode, 'target:', e.target.tagName, e.target.id);
 
-        // Check if we were box-selecting (drag > 5px)
-        if (this.dragStart) {
-            const dx = Math.abs(e.clientX - this.dragStart.x);
-            const dy = Math.abs(e.clientY - this.dragStart.y);
-            if (dx > 5 || dy > 5) {
-                // This was a box select, not a click
-                console.log('onClick: was box-select, returning');
-                return;
-            }
+        // Check if we were box-selecting
+        if (this.wasBoxSelect) {
+            this.wasBoxSelect = false;
+            console.log('onClick: was box-select, returning');
+            return;
         }
 
         const entity = sceneManager.pickEntity(e.clientX, e.clientY, gameState.entities);
@@ -567,6 +564,7 @@ export class InputManager {
             const dy = Math.abs(this.dragEnd.y - this.dragStart.y);
 
             if (dx > 5 || dy > 5) {
+                this.wasBoxSelect = true;  // Flag to prevent onClick from clearing selection
                 const startWorld = sceneManager.getWorldPosition(this.dragStart.x, this.dragStart.y);
                 const endWorld = sceneManager.getWorldPosition(this.dragEnd.x, this.dragEnd.y);
 
