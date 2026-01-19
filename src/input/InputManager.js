@@ -570,6 +570,9 @@ export class InputManager {
                 const startWorld = sceneManager.getWorldPosition(this.dragStart.x, this.dragStart.y);
                 const endWorld = sceneManager.getWorldPosition(this.dragEnd.x, this.dragEnd.y);
 
+                console.log('Drag end - screen coords:', this.dragStart, '->', this.dragEnd);
+                console.log('Drag end - world coords:', startWorld, '->', endWorld);
+
                 if (startWorld && endWorld) {
                     eventBus.emit(GameEvents.INPUT_DRAG_END, {
                         startX: startWorld.x,
@@ -578,6 +581,8 @@ export class InputManager {
                         endZ: endWorld.z,
                         addToSelection: e.shiftKey
                     });
+                } else {
+                    console.warn('Box select failed - could not get world positions!', { startWorld, endWorld });
                 }
             }
 

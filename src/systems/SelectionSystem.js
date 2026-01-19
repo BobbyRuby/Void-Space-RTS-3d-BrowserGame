@@ -59,27 +59,42 @@ export class SelectionSystem {
     handleBoxSelect(data) {
         const { startX, startZ, endX, endZ, addToSelection } = data;
 
+        console.log('handleBoxSelect called with:', { startX, startZ, endX, endZ });
+
         const minX = Math.min(startX, endX);
         const maxX = Math.max(startX, endX);
         const minZ = Math.min(startZ, endZ);
         const maxZ = Math.max(startZ, endZ);
+
+        console.log('Box bounds:', { minX, maxX, minZ, maxZ });
 
         if (!addToSelection) {
             this.clearSelection();
         }
 
         // Select all player units in the box (not buildings)
+        let checkedCount = 0;
+        let selectedCount = 0;
         for (const entity of gameState.entities) {
             if (entity.dead || entity.team !== TEAMS.PLAYER || !entity.isUnit) continue;
 
             const pos = entity.mesh?.position;
-            if (!pos) continue;
+            if (!pos) {
+                console.log('Entity has no mesh position:', entity.type, entity.id);
+                continue;
+            }
+
+            checkedCount++;
+            console.log(`Checking ${entity.type} at (${pos.x.toFixed(1)}, ${pos.z.toFixed(1)}) against box`);
 
             if (pos.x >= minX && pos.x <= maxX &&
                 pos.z >= minZ && pos.z <= maxZ) {
                 gameState.select(entity);
+                selectedCount++;
+                console.log(`  -> SELECTED!`);
             }
         }
+        console.log(`Box select: checked ${checkedCount} units, selected ${selectedCount}`);
 
         eventBus.emit(GameEvents.UI_SELECTION_CHANGED, {
             selected: gameState.selectedEntities
