@@ -79,9 +79,19 @@ export class InputManager {
 
         console.log('InputManager: All event listeners attached to canvas');
 
+        // Debug: Window-level listener (fires before EVERYTHING)
+        window.addEventListener('mousedown', (e) => {
+            console.log('WINDOW mousedown:', e.clientX, e.clientY, '->', e.target.tagName, e.target.id || e.target.className);
+        }, true);
+
         // Debug: Also listen on document to see if events are happening at all
         document.addEventListener('mousedown', (e) => {
-            console.log('DOCUMENT mousedown:', e.target.tagName, e.target.id);
+            console.log('DOCUMENT mousedown:', e.target.tagName, e.target.id || e.target.className);
+            // Show what element is at this position
+            const elemAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+            if (elemAtPoint !== e.target) {
+                console.log('  -> Element at point:', elemAtPoint?.tagName, elemAtPoint?.id || elemAtPoint?.className);
+            }
         }, true);
 
         // Prevent default context menu
@@ -221,23 +231,30 @@ export class InputManager {
     // ===== Mouse Input =====
 
     onClick(e) {
+        console.log('onClick ENTRY - buildMode:', gameState.buildMode, 'target:', e.target.tagName, e.target.id);
+
         // Check if we were box-selecting (drag > 5px)
         if (this.dragStart) {
             const dx = Math.abs(e.clientX - this.dragStart.x);
             const dy = Math.abs(e.clientY - this.dragStart.y);
             if (dx > 5 || dy > 5) {
                 // This was a box select, not a click
+                console.log('onClick: was box-select, returning');
                 return;
             }
         }
 
         const entity = sceneManager.pickEntity(e.clientX, e.clientY, gameState.entities);
         const worldPos = sceneManager.getWorldPosition(e.clientX, e.clientY);
+        console.log('onClick: worldPos=', worldPos, 'entity=', entity?.type);
 
         // Handle build mode
         if (gameState.buildMode) {
             if (worldPos) {
+                console.log('onClick: calling handleBuildModeClick at', worldPos);
                 this.handleBuildModeClick(worldPos);
+            } else {
+                console.log('onClick: buildMode but worldPos is NULL - raycasting failed!');
             }
             return;
         }
