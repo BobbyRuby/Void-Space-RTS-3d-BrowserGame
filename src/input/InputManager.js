@@ -68,25 +68,26 @@ export class InputManager {
         canvas.addEventListener('dblclick', (e) => this.onDoubleClick(e));
         canvas.addEventListener('contextmenu', (e) => this.onRightClick(e));
         // Use capture phase to ensure we get events before BabylonJS
-        canvas.addEventListener('mousedown', (e) => this.onMouseDown(e), true);
-        canvas.addEventListener('mouseup', (e) => this.onMouseUp(e), true);
-        canvas.addEventListener('mousemove', (e) => this.onMouseMove(e), true);
+        // Using pointer events instead of mouse events to avoid Babylon.js conflicts
+        canvas.addEventListener('pointerdown', (e) => this.onMouseDown(e), true);
+        canvas.addEventListener('pointerup', (e) => this.onMouseUp(e), true);
+        canvas.addEventListener('pointermove', (e) => this.onMouseMove(e), true);
 
         // Debug: Add a raw test listener
-        canvas.addEventListener('mousedown', (e) => {
-            console.log('RAW mousedown on canvas:', e.button, e.target.tagName);
+        canvas.addEventListener('pointerdown', (e) => {
+            console.log('RAW pointerdown on canvas:', e.button, e.target.tagName);
         }, true);
 
         console.log('InputManager: All event listeners attached to canvas');
 
         // Debug: Window-level listener (fires before EVERYTHING)
-        window.addEventListener('mousedown', (e) => {
-            console.log('WINDOW mousedown:', e.clientX, e.clientY, '->', e.target.tagName, e.target.id || e.target.className);
+        window.addEventListener('pointerdown', (e) => {
+            console.log('WINDOW pointerdown:', e.clientX, e.clientY, '->', e.target.tagName, e.target.id || e.target.className);
         }, true);
 
         // Debug: Also listen on document to see if events are happening at all
-        document.addEventListener('mousedown', (e) => {
-            console.log('DOCUMENT mousedown:', e.target.tagName, e.target.id || e.target.className);
+        document.addEventListener('pointerdown', (e) => {
+            console.log('DOCUMENT pointerdown:', e.target.tagName, e.target.id || e.target.className);
             // Show what element is at this position
             const elemAtPoint = document.elementFromPoint(e.clientX, e.clientY);
             if (elemAtPoint !== e.target) {
@@ -525,7 +526,7 @@ export class InputManager {
     }
 
     onMouseDown(e) {
-        console.log('MouseDown RAW:', e.button, e.target.tagName, e.target.id, 'canvas?', e.target === this.canvas);
+        console.log('MouseDown ENTRY:', e.button, e.target.tagName, e.target.id, 'canvas?', e.target === this.canvas);
 
         // Only handle canvas clicks
         if (e.target.id !== 'renderCanvas') {
