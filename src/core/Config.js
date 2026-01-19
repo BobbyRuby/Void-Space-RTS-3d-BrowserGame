@@ -478,6 +478,7 @@ export const UNITS = {
         range: 65,
         fireRate: 500,
         weaponType: 'cannon',
+        multiTarget: 2, // Can engage 2 targets simultaneously
         // Twin turrets at z:6 and z:-2 with dual barrels at visual (±0.5, 3, 10) and (±0.5, 3, 2)
         // Scale: size*0.5 = 4, so config = visual/4
         hardpoints: [
@@ -501,6 +502,7 @@ export const UNITS = {
         fireRate: 600,
         weaponType: 'plasma',
         secondaryWeapon: 'cannon',
+        multiTarget: 4, // Can engage 4 targets simultaneously
         // VLS batteries on sides + bow weapons
         // Visual scale s = 12/10 = 1.2, mult = 6
         hardpoints: [
@@ -524,6 +526,7 @@ export const UNITS = {
         fireRate: 700,
         weaponType: 'beam',
         secondaryWeapon: 'missile',
+        multiTarget: 6, // Can engage 6 targets simultaneously
         // Triple turrets at z:12, z:2, z:-6 with muzzles at (±0.8*s, y+1.5*s, z+10*s)
         // Visual scale s = 16/12 = 1.33, mult = 8
         hardpoints: [
@@ -553,6 +556,7 @@ export const UNITS = {
         weaponType: 'beam',
         secondaryWeapon: 'cannon',
         tertiaryWeapon: 'missile',
+        multiTarget: 6, // Can engage 6 targets simultaneously
         // Four super-heavy turrets at z:18, z:10, z:-4, z:-12 with triple barrels
         // Muzzles at ((j-1)*1.2*s, (y+2.5)*s, (z+15)*s) where s=22/15=1.47, mult=11
         hardpoints: [
@@ -571,32 +575,192 @@ export const UNITS = {
 };
 
 export const ALIEN_UNITS = {
-    guardian: {
-        name: 'Guardian',
-        icon: '⬡',
-        size: 6,
-        maxHealth: 400,
-        shield: 200,
-        speed: 15,
-        damage: 40,
-        range: 60,
-        fireRate: 500,
-        weaponType: 'plasma',
-        hardpoints: [{ x: -1, y: 0, z: 2 }, { x: 1, y: 0, z: 2 }],
+    // Matches Scout
+    drone: {
+        name: 'Drone',
+        icon: '◇',
+        size: 2,
+        maxHealth: 50,
+        shield: 30,
+        speed: 40,
+        damage: 5,
+        range: 35,
+        fireRate: 180,
+        weaponType: 'laser',
+        hardpoints: [{ x: 0, y: 0.3, z: 2 }],
         color: [0.8, 0.4, 1.0]
     },
+    // Matches Interceptor
+    stinger: {
+        name: 'Stinger',
+        icon: '▷',
+        size: 2.5,
+        maxHealth: 80,
+        shield: 40,
+        speed: 35,
+        damage: 12,
+        range: 40,
+        fireRate: 250,
+        weaponType: 'laser',
+        hardpoints: [{ x: -2, y: 0, z: 0.8 }, { x: 2, y: 0, z: 0.8 }],
+        color: [0.8, 0.4, 1.0]
+    },
+    // Matches Striker
+    lancer: {
+        name: 'Lancer',
+        icon: '▶',
+        size: 3,
+        maxHealth: 100,
+        shield: 50,
+        speed: 30,
+        damage: 18,
+        range: 45,
+        fireRate: 300,
+        weaponType: 'plasma',
+        hardpoints: [
+            { x: -1.33, y: -0.2, z: 0.67 }, { x: 1.33, y: -0.2, z: 0.67 },
+            { x: -2.33, y: -0.2, z: 0.67 }, { x: 2.33, y: -0.2, z: 0.67 }
+        ],
+        color: [0.8, 0.4, 1.0]
+    },
+    // Matches Heavy Fighter
+    marauder: {
+        name: 'Marauder',
+        icon: '◆',
+        size: 4,
+        maxHealth: 180,
+        shield: 80,
+        speed: 22,
+        damage: 25,
+        range: 50,
+        fireRate: 400,
+        weaponType: 'cannon',
+        hardpoints: [
+            { x: 0, y: -0.35, z: 3.5 },
+            { x: -1.6, y: -0.2, z: 0.65 }, { x: 1.6, y: -0.2, z: 0.65 }
+        ],
+        color: [0.8, 0.4, 1.0]
+    },
+    // Matches Bomber
+    ravager: {
+        name: 'Ravager',
+        icon: '◈',
+        size: 5,
+        maxHealth: 250,
+        shield: 50,
+        speed: 18,
+        damage: 60,
+        range: 35,
+        fireRate: 1500,
+        splash: 15,
+        weaponType: 'missile',
+        hardpoints: [
+            { x: -0.48, y: -0.4, z: 0.2 }, { x: 0.48, y: -0.4, z: 0.2 },
+            { x: -0.16, y: -0.4, z: 0.2 }, { x: 0.16, y: -0.4, z: 0.2 }
+        ],
+        color: [0.8, 0.4, 1.0]
+    },
+    // Matches Gunship
+    guardian: {
+        name: 'Guardian',
+        icon: '▣',
+        size: 5,
+        maxHealth: 300,
+        shield: 100,
+        speed: 20,
+        damage: 20,
+        range: 55,
+        fireRate: 200,
+        weaponType: 'laser',
+        hardpoints: [
+            { x: -0.13, y: 1.13, z: 2.17 }, { x: 0.13, y: 1.13, z: 2.17 },
+            { x: -1.17, y: 0, z: 1.83 }, { x: 1.17, y: 0, z: 1.83 }
+        ],
+        color: [0.8, 0.4, 1.0]
+    },
+    // Matches Frigate
+    warden: {
+        name: 'Warden',
+        icon: '▰',
+        size: 8,
+        maxHealth: 600,
+        shield: 200,
+        speed: 15,
+        damage: 35,
+        range: 65,
+        fireRate: 500,
+        weaponType: 'cannon',
+        multiTarget: 2,
+        hardpoints: [
+            { x: -0.125, y: 0.75, z: 2.5 }, { x: 0.125, y: 0.75, z: 2.5 },
+            { x: -0.125, y: 0.75, z: 0.5 }, { x: 0.125, y: 0.75, z: 0.5 }
+        ],
+        color: [0.6, 0.2, 0.8]
+    },
+    // Matches Cruiser
     sentinel: {
         name: 'Sentinel',
-        icon: '⬢',
-        size: 10,
-        maxHealth: 800,
+        icon: '▮',
+        size: 12,
+        maxHealth: 1000,
         shield: 400,
-        speed: 8,
-        damage: 60,
+        speed: 12,
+        damage: 50,
         range: 80,
         fireRate: 600,
+        weaponType: 'plasma',
+        secondaryWeapon: 'cannon',
+        multiTarget: 4,
+        hardpoints: [
+            { x: -0.42, y: 0.5, z: 2.33, weapon: 'plasma' }, { x: 0.42, y: 0.5, z: 2.33, weapon: 'plasma' },
+            { x: -0.42, y: 0.5, z: 1.17, weapon: 'cannon' }, { x: 0.42, y: 0.5, z: 1.17, weapon: 'cannon' }
+        ],
+        color: [0.6, 0.2, 0.8]
+    },
+    // Matches Battlecruiser
+    overlord: {
+        name: 'Overlord',
+        icon: '▬',
+        size: 16,
+        maxHealth: 1800,
+        shield: 600,
+        speed: 10,
+        damage: 80,
+        range: 90,
+        fireRate: 700,
         weaponType: 'beam',
-        hardpoints: [{ x: 0, y: 0, z: 4 }, { x: -2, y: 0, z: 3 }, { x: 2, y: 0, z: 3 }],
+        secondaryWeapon: 'missile',
+        multiTarget: 6,
+        hardpoints: [
+            { x: -0.13, y: 0.56, z: 2.75, weapon: 'beam' }, { x: 0.13, y: 0.56, z: 2.75, weapon: 'beam' },
+            { x: -0.13, y: 0.81, z: 1.5, weapon: 'beam' }, { x: 0.13, y: 0.81, z: 1.5, weapon: 'beam' },
+            { x: -1.17, y: 0, z: 1.0, weapon: 'missile' }, { x: 1.17, y: 0, z: 1.0, weapon: 'missile' },
+            { x: -1.17, y: 0, z: 0.5, weapon: 'missile' }, { x: 1.17, y: 0, z: 0.5, weapon: 'missile' }
+        ],
+        color: [0.6, 0.2, 0.8]
+    },
+    // Matches Dreadnought
+    leviathan: {
+        name: 'Leviathan',
+        icon: '█',
+        size: 22,
+        maxHealth: 3000,
+        shield: 1000,
+        speed: 7,
+        damage: 120,
+        range: 100,
+        fireRate: 800,
+        weaponType: 'beam',
+        secondaryWeapon: 'cannon',
+        tertiaryWeapon: 'missile',
+        multiTarget: 6,
+        hardpoints: [
+            { x: -0.16, y: 0.59, z: 3.0, weapon: 'beam' }, { x: 0, y: 0.59, z: 3.0, weapon: 'beam' }, { x: 0.16, y: 0.59, z: 3.0, weapon: 'beam' },
+            { x: -0.16, y: 0.95, z: 2.27, weapon: 'beam' }, { x: 0, y: 0.95, z: 2.27, weapon: 'beam' }, { x: 0.16, y: 0.95, z: 2.27, weapon: 'beam' },
+            { x: -0.91, y: 0.09, z: 1.27, weapon: 'cannon' }, { x: 0.91, y: 0.09, z: 1.27, weapon: 'cannon' },
+            { x: -0.91, y: -0.09, z: 0.82, weapon: 'missile' }, { x: 0.91, y: -0.09, z: 0.82, weapon: 'missile' },
+            { x: -0.91, y: 0, z: 0.45, weapon: 'missile' }, { x: 0.91, y: 0, z: 0.45, weapon: 'missile' }
+        ],
         color: [0.6, 0.2, 0.8]
     }
 };

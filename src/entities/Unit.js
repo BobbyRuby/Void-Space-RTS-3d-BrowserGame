@@ -39,6 +39,7 @@ export class Unit extends Entity {
 
         // Combat
         this.attackTarget = null;
+        this.attackTargets = []; // For multi-target capital ships
         this.lastFire = 0;
         this.isAttackMoving = false;
         this.holdPosition = false;
@@ -311,30 +312,114 @@ export class Unit extends Entity {
             return;
         }
 
-        // Combat logic
-        if (this.attackTarget && !this.attackTarget.dead) {
-            const dist = this.distanceTo(this.attackTarget);
+        // Combat logic - handle multi-target capital ships
+        const maxTargets = this.def.multiTarget || 1;
 
-            if (dist > this.def.range) {
-                // Move closer
-                if (!this.holdPosition) {
-                    this.moveToward(this.attackTarget.mesh.position.x, this.attackTarget.mesh.position.z, dt);
+        if (maxTargets > 1) {
+            // Multi-target combat (capital ships)
+            this.updateMultiTargetCombat(dt, maxTargets);
+        } else {
+            // Single-target combat (regular units)
+            if (this.attackTarget && !this.attackTarget.dead) {
+                const dist = this.distanceTo(this.attackTarget);
+
+                if (dist > this.def.range) {
+                    // Move closer
+                    if (!this.holdPosition) {
+                        this.moveToward(this.attackTarget.mesh.position.x, this.attackTarget.mesh.position.z, dt);
+                    }
+                } else {
+                    // Fire
+                    const now = performance.now();
+                    if (now - this.lastFire > this.def.fireRate) {
+                        this.fireAt(this.attackTarget);
+                        this.lastFire = now;
+                    }
                 }
             } else {
-                // Fire
-                const now = performance.now();
-                if (now - this.lastFire > this.def.fireRate) {
-                    this.fireAt(this.attackTarget);
-                    this.lastFire = now;
+                this.attackTarget = null;
+
+                // Attack-move: find targets while moving
+                if (this.isAttackMoving || this.holdPosition) {
+                    const target = this.findTarget();
+                    if (target) {
+                        this.attackTarget = target;
+                        return;
+                    }
+                }
+
+                // Patrol logic
+                if (this.patrolPoints && this.patrolPoints.length > 0) {
+                    const target = this.patrolPoints[this.patrolIndex];
+                    const dist = Math.hypot(
+                        this.mesh.position.x - target.x,
+                        this.mesh.position.z - target.z
+                    );
+
+                    if (dist < 5) {
+                        this.patrolIndex = (this.patrolIndex + 1) % this.patrolPoints.length;
+                    } else {
+                        this.moveToward(target.x, target.z, dt);
+                    }
+
+                    // Check for enemies while patrolling
+                    const enemy = this.findTarget();
+                    if (enemy) this.attackTarget = enemy;
+                    return;
+                }
+
+                // Normal movement
+                this.updateMovement(dt);
+            }
+        }
+    }
+
+    updateMultiTargetCombat(dt, maxTargets) {
+        // Clean up dead targets
+        this.attackTargets = this.attackTargets.filter(t => t && !t.dead && t.mesh);
+
+        // Find additional targets if we have room
+        if (this.attackTargets.length < maxTargets) {
+            const newTargets = this.findMultipleTargets(maxTargets - this.attackTargets.length);
+            for (const t of newTargets) {
+                if (!this.attackTargets.includes(t)) {
+                    this.attackTargets.push(t);
                 }
             }
-        } else {
-            this.attackTarget = null;
+        }
 
-            // Attack-move: find targets while moving
+        // Also include primary attackTarget if set
+        if (this.attackTarget && !this.attackTarget.dead && !this.attackTargets.includes(this.attackTarget)) {
+            this.attackTargets.unshift(this.attackTarget);
+            if (this.attackTargets.length > maxTargets) {
+                this.attackTargets.pop();
+            }
+        }
+
+        // Update primary target reference
+        this.attackTarget = this.attackTargets[0] || null;
+
+        if (this.attackTargets.length > 0) {
+            // Check if any target is in range
+            const targetsInRange = this.attackTargets.filter(t => this.distanceTo(t) <= this.def.range);
+
+            if (targetsInRange.length > 0) {
+                // Fire at all targets in range
+                const now = performance.now();
+                if (now - this.lastFire > this.def.fireRate) {
+                    this.fireAtMultiple(targetsInRange);
+                    this.lastFire = now;
+                }
+            } else if (!this.holdPosition && this.attackTarget) {
+                // Move toward closest target
+                this.moveToward(this.attackTarget.mesh.position.x, this.attackTarget.mesh.position.z, dt);
+            }
+        } else {
+            // No targets - look for enemies or continue with orders
             if (this.isAttackMoving || this.holdPosition) {
                 const target = this.findTarget();
                 if (target) {
+                    this.attackTargets.push(target);
                     this.attackTarget = target;
                     return;
                 }
@@ -355,8 +440,11 @@ export class Unit extends Entity {
                 }
 
                 // Check for enemies while patrolling
-                const enemy = this.findTarget();
-                if (enemy) this.attackTarget = enemy;
+                const enemies = this.findMultipleTargets(maxTargets);
+                if (enemies.length > 0) {
+                    this.attackTargets = enemies;
+                    this.attackTarget = enemies[0];
+                }
                 return;
             }
 
@@ -604,6 +692,32 @@ export class Unit extends Entity {
         return closest;
     }
 
+    findMultipleTargets(count) {
+        const targets = [];
+        const maxRange = this.def.range * 1.5;
+
+        // Get all valid enemies sorted by distance
+        const enemies = [];
+        for (const ent of gameState.entities) {
+            if (ent.dead || ent.team === this.team) continue;
+            if (!gameState.isHostile(this.team, ent.team)) continue;
+            if (this.attackTargets.includes(ent)) continue; // Skip already targeted
+
+            const dist = this.distanceTo(ent);
+            if (dist < maxRange) {
+                enemies.push({ ent, dist });
+            }
+        }
+
+        // Sort by distance and take up to 'count' targets
+        enemies.sort((a, b) => a.dist - b.dist);
+        for (let i = 0; i < Math.min(count, enemies.length); i++) {
+            targets.push(enemies[i].ent);
+        }
+
+        return targets;
+    }
+
     findNearestOre() {
         let closest = null;
         let closestDist = Infinity;
@@ -679,6 +793,42 @@ export class Unit extends Entity {
                 splash: this.def.splash || 0
             });
         }
+    }
+
+    fireAtMultiple(targets) {
+        if (!targets || targets.length === 0) return;
+
+        const hardpoints = this.def.hardpoints;
+        if (!hardpoints || hardpoints.length === 0) {
+            // No hardpoints - fire at first target only
+            this.fireAt(targets[0]);
+            return;
+        }
+
+        // Distribute hardpoints across targets
+        const damagePerHardpoint = this.def.damage / hardpoints.length;
+        const hardpointsPerTarget = Math.ceil(hardpoints.length / targets.length);
+
+        hardpoints.forEach((hp, index) => {
+            // Assign this hardpoint to a target (round-robin)
+            const targetIndex = Math.floor(index / hardpointsPerTarget) % targets.length;
+            const target = targets[targetIndex];
+
+            // Stagger shots slightly (50ms between each hardpoint)
+            setTimeout(() => {
+                if (this.dead || !target || target.dead) return;
+
+                eventBus.emit(GameEvents.COMBAT_PROJECTILE_FIRED, {
+                    shooter: this,
+                    target,
+                    startPos: this.mesh.position.clone(),
+                    damage: damagePerHardpoint,
+                    splash: this.def.splash ? this.def.splash / hardpoints.length : 0,
+                    hardpointOffset: { x: hp.x * this.size * 0.5, y: hp.y * this.size * 0.5, z: hp.z * this.size * 0.5 },
+                    hardpointWeapon: hp.weapon || this.def.weaponType
+                });
+            }, index * 50);
+        });
     }
 
     takeDamage(amount, attacker) {

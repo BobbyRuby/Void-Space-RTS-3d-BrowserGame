@@ -319,7 +319,10 @@ export class InputManager {
     }
 
     handleBuildModeClick(worldPos) {
-        if (gameState.buildMode === 'attackMove') {
+        if (gameState.buildMode === 'move') {
+            selectionSystem.commandMove(worldPos.x, worldPos.z);
+            eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
+        } else if (gameState.buildMode === 'attackMove') {
             selectionSystem.commandAttackMove(worldPos.x, worldPos.z);
             eventBus.emit(GameEvents.UI_BUILD_MODE_EXIT, {});
         } else if (gameState.buildMode === 'patrol') {

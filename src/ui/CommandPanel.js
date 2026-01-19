@@ -348,7 +348,7 @@ export class CommandPanel {
     }
 
     startAttackCommand() {
-        eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, { mode: 'attack' });
+        eventBus.emit(GameEvents.UI_BUILD_MODE_ENTER, { mode: 'attackMove' });
         document.body.classList.add('cursor-attack');
     }
 

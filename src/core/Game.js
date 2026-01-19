@@ -269,9 +269,6 @@ export class Game {
             // Only defend buildings
             if (!entity.isBuilding || entity.dead) return;
 
-            // Only for player team (team 0) - AI handles its own logic
-            if (entity.team !== TEAMS.PLAYER) return;
-
             // Need a valid attacker to engage
             if (!attacker || attacker.dead) return;
 
@@ -292,7 +289,7 @@ export class Game {
             }
 
             // Alert player (first attack only, use longer cooldown)
-            if (now - lastTrigger > 10000) {
+            if (entity.team === TEAMS.PLAYER && now - lastTrigger > 10000) {
                 this.showAlert(`${entity.def?.name || 'Structure'} under attack!`, 'warning');
             }
         });
