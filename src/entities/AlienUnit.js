@@ -3,9 +3,9 @@
 // Neutral alien defensive units
 // ============================================================
 
-import { Unit } from './Unit.js';
-import { ALIEN_UNITS, UNITS, TEAM_COLORS } from '../core/Config.js';
-import { gameState } from '../core/GameState.js';
+import { Unit } from './Unit.js?v=20260119';
+import { ALIEN_UNITS, UNITS, TEAM_COLORS } from '../core/Config.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
 
 export class AlienUnit extends Unit {
     constructor(x, z, team, alienType, scene) {

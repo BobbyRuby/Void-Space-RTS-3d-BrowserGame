@@ -3,9 +3,9 @@
 // Unified always-visible bottom panel containing all UI sections
 // ============================================================
 
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { TEAMS } from '../core/Config.js';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { TEAMS } from '../core/Config.js?v=20260119';
 
 export class MainPanel {
     constructor() {

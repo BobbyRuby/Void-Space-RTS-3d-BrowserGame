@@ -3,11 +3,11 @@
 // Tactical overview map with click navigation
 // ============================================================
 
-import { CONFIG, TEAMS, TEAM_COLORS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { selectionSystem } from '../systems/SelectionSystem.js';
-import { sceneManager } from '../rendering/SceneManager.js';
+import { CONFIG, TEAMS, TEAM_COLORS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { selectionSystem } from '../systems/SelectionSystem.js?v=20260119';
+import { sceneManager } from '../rendering/SceneManager.js?v=20260119';
 
 export class Minimap {
     constructor() {

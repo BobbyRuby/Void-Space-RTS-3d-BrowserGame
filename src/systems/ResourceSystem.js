@@ -3,10 +3,10 @@
 // Handles ore/crystal nodes and resource regrowth
 // ============================================================
 
-import { CONFIG } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { getSeededRandom } from '../core/SeededRandom.js';
+import { CONFIG } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { getSeededRandom } from '../core/SeededRandom.js?v=20260119';
 
 // Debug: Log ore regrow rate on load
 console.log('[ResourceSystem] ORE_REGROW_RATE:', CONFIG.ORE_REGROW_RATE);

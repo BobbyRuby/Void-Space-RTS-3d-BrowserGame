@@ -26,6 +26,7 @@ export let CONFIG = {
     CRYSTAL_AMOUNT_MAX: 1000,
     CRYSTAL_VALUE_MULTIPLIER: 5,
     CRYSTAL_REGROW_RATE: 0.5,
+    ORE_VALUE_MULTIPLIER: 0.5,  // Credits per ore (reduced from 2.0 for economy balance)
 
     // Asteroid belt
     ASTEROID_BELT_INNER: 400,
@@ -126,6 +127,7 @@ export function resetConfig() {
         CRYSTAL_AMOUNT_MAX: 1000,
         CRYSTAL_VALUE_MULTIPLIER: 5,
         CRYSTAL_REGROW_RATE: 0.5,
+        ORE_VALUE_MULTIPLIER: 0.5,
         ASTEROID_BELT_INNER: 400,
         ASTEROID_BELT_OUTER: 550,
         NUM_ASTEROIDS: 200,

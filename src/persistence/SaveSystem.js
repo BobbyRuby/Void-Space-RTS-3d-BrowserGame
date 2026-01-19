@@ -3,9 +3,9 @@
 // Game state persistence using LocalStorage and IndexedDB
 // ============================================================
 
-import { CONFIG, TEAMS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
+import { CONFIG, TEAMS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
 
 // Save format version for migration support
 const SAVE_VERSION = 1;

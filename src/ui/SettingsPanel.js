@@ -3,9 +3,9 @@
 // Graphics quality settings and game options
 // ============================================================
 
-import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { graphicsManager } from '../rendering/GraphicsManager.js';
+import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { graphicsManager } from '../rendering/GraphicsManager.js?v=20260119';
 
 // Note: eventBus and GameEvents are used for emitting SETTINGS_OPEN/SETTINGS_CLOSE events
 

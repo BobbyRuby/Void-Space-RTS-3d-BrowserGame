@@ -4,9 +4,9 @@
 // Renders into MainPanel's build section
 // ============================================================
 
-import { CONFIG, BUILDINGS, UNITS, TEAMS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
+import { CONFIG, BUILDINGS, UNITS, TEAMS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
 
 // Helper to normalize cost - handles both number and object formats
 function normalizeCost(cost) {

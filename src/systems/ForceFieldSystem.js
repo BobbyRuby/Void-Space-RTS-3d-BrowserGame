@@ -3,10 +3,10 @@
 // Manages force field generators and energy barriers between them
 // ============================================================
 
-import { BUILDINGS, TEAM_COLORS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { MaterialPool } from '../core/MaterialPool.js';
+import { BUILDINGS, TEAM_COLORS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { MaterialPool } from '../core/MaterialPool.js?v=20260119';
 
 export class ForceFieldSystem {
     constructor() {

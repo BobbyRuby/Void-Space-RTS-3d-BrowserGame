@@ -3,8 +3,8 @@
 // Pre-creates and reuses materials to prevent memory leaks
 // ============================================================
 
-import { TEAM_COLORS, WEAPON_TYPES, GRAPHICS_SETTINGS, graphicsLevel, TESSELLATION_SETTINGS } from './Config.js';
-import { eventBus, GameEvents } from './EventBus.js';
+import { TEAM_COLORS, WEAPON_TYPES, GRAPHICS_SETTINGS, graphicsLevel, TESSELLATION_SETTINGS } from './Config.js?v=20260119';
+import { eventBus, GameEvents } from './EventBus.js?v=20260119';
 
 /**
  * MaterialPool - Singleton that manages all shared materials

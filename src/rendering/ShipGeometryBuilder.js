@@ -3,7 +3,7 @@
 // Creates smooth, rounded ship geometry with quality-aware tessellation
 // ============================================================
 
-import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js';
+import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js?v=20260119';
 
 /**
  * ShipGeometryBuilder - Utility class for creating smooth ship geometry

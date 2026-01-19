@@ -3,8 +3,8 @@
 // Grid-based navigation with obstacle avoidance
 // ============================================================
 
-import { CONFIG } from '../core/Config.js';
-import { gameState } from '../core/GameState.js';
+import { CONFIG } from '../core/Config.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
 
 // Priority Queue for A* (min-heap)
 class PriorityQueue {

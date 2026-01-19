@@ -3,8 +3,8 @@
 // Base class for all game entities (units, buildings)
 // ============================================================
 
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { TEAM_COLORS } from '../core/Config.js';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { TEAM_COLORS } from '../core/Config.js?v=20260119';
 
 let entityIdCounter = 0;
 

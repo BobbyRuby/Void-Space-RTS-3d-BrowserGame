@@ -3,4 +3,4 @@
 // Re-exports all persistence components
 // ============================================================
 
-export { SaveSystem, saveSystem } from './SaveSystem.js';
+export { SaveSystem, saveSystem } from './SaveSystem.js?v=20260119';

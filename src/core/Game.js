@@ -3,34 +3,34 @@
 // Orchestrates all game modules and manages game lifecycle
 // ============================================================
 
-import { CONFIG, TEAMS, BUILDINGS, UNITS, TEAM_NAMES, applyGameConfig } from './Config.js';
-import { eventBus, GameEvents } from './EventBus.js';
-import { gameState } from './GameState.js';
-import { resetSeededRandom, getSeededRandom } from './SeededRandom.js';
+import { CONFIG, TEAMS, BUILDINGS, UNITS, TEAM_NAMES, applyGameConfig } from './Config.js?v=20260119';
+import { eventBus, GameEvents } from './EventBus.js?v=20260119';
+import { gameState } from './GameState.js?v=20260119';
+import { resetSeededRandom, getSeededRandom } from './SeededRandom.js?v=20260119';
 
-import { Unit } from '../entities/Unit.js';
-import { Building } from '../entities/Building.js';
-import { AlienUnit } from '../entities/AlienUnit.js';
+import { Unit } from '../entities/Unit.js?v=20260119';
+import { Building } from '../entities/Building.js?v=20260119';
+import { AlienUnit } from '../entities/AlienUnit.js?v=20260119';
 
-import { sceneManager } from '../rendering/SceneManager.js';
-import { combatSystem } from '../systems/CombatSystem.js';
-import { aiSystem } from '../systems/AISystem.js';
-import { resourceSystem } from '../systems/ResourceSystem.js';
-import { selectionSystem } from '../systems/SelectionSystem.js';
-import { fogOfWar } from '../systems/FogOfWar.js';
-import { pathfinding } from '../systems/Pathfinding.js';
-import { formationSystem } from '../systems/FormationSystem.js';
-import { forceFieldSystem } from '../systems/ForceFieldSystem.js';
-import { inputManager } from '../input/InputManager.js';
-import { minimap } from '../ui/Minimap.js';
-import { mainPanel } from '../ui/MainPanel.js';
-import { buildMenu } from '../ui/BuildMenu.js';
-import { selectionPanel } from '../ui/SelectionPanel.js';
-import { commandPanel } from '../ui/CommandPanel.js';
-import { rallyPointSection } from '../ui/RallyPointSection.js';
-import { settingsPanel } from '../ui/SettingsPanel.js';
-import { soundManager } from '../audio/SoundManager.js';
-import { saveSystem } from '../persistence/SaveSystem.js';
+import { sceneManager } from '../rendering/SceneManager.js?v=20260119';
+import { combatSystem } from '../systems/CombatSystem.js?v=20260119';
+import { aiSystem } from '../systems/AISystem.js?v=20260119';
+import { resourceSystem } from '../systems/ResourceSystem.js?v=20260119';
+import { selectionSystem } from '../systems/SelectionSystem.js?v=20260119';
+import { fogOfWar } from '../systems/FogOfWar.js?v=20260119';
+import { pathfinding } from '../systems/Pathfinding.js?v=20260119';
+import { formationSystem } from '../systems/FormationSystem.js?v=20260119';
+import { forceFieldSystem } from '../systems/ForceFieldSystem.js?v=20260119';
+import { inputManager } from '../input/InputManager.js?v=20260119';
+import { minimap } from '../ui/Minimap.js?v=20260119';
+import { mainPanel } from '../ui/MainPanel.js?v=20260119';
+import { buildMenu } from '../ui/BuildMenu.js?v=20260119';
+import { selectionPanel } from '../ui/SelectionPanel.js?v=20260119';
+import { commandPanel } from '../ui/CommandPanel.js?v=20260119';
+import { rallyPointSection } from '../ui/RallyPointSection.js?v=20260119';
+import { settingsPanel } from '../ui/SettingsPanel.js?v=20260119';
+import { soundManager } from '../audio/SoundManager.js?v=20260119';
+import { saveSystem } from '../persistence/SaveSystem.js?v=20260119';
 
 export class Game {
     constructor() {

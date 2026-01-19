@@ -3,9 +3,9 @@
 // Centralized state management for the game
 // ============================================================
 
-import { TEAMS, CONFIG } from './Config.js';
-import { eventBus, GameEvents } from './EventBus.js';
-import { SpatialGrid, resetSpatialGrid } from '../systems/SpatialGrid.js';
+import { TEAMS, CONFIG } from './Config.js?v=20260119';
+import { eventBus, GameEvents } from './EventBus.js?v=20260119';
+import { SpatialGrid, resetSpatialGrid } from '../systems/SpatialGrid.js?v=20260119';
 
 class GameState {
     constructor() {
@@ -258,6 +258,12 @@ class GameState {
 
     modifyResource(team, resource, amount) {
         if (this.resources[team]) {
+            // Guard against NaN - skip if amount is invalid
+            if (!Number.isFinite(amount)) {
+                console.warn(`modifyResource: Invalid amount for ${resource}: ${amount}`);
+                return;
+            }
+
             const oldValue = this.resources[team][resource];
             this.resources[team][resource] += amount;
 

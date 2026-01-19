@@ -3,9 +3,9 @@
 // Visibility management with explored/visible states
 // ============================================================
 
-import { CONFIG, TEAMS, BUILDINGS, UNITS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
+import { CONFIG, TEAMS, BUILDINGS, UNITS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
 
 // Visibility states
 export const Visibility = {

@@ -4,10 +4,10 @@
 // Renders into MainPanel's command section
 // ============================================================
 
-import { CONFIG, TEAMS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { FormationType } from '../systems/FormationSystem.js';
+import { CONFIG, TEAMS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { FormationType } from '../systems/FormationSystem.js?v=20260119';
 
 // Command types
 export const CommandType = {

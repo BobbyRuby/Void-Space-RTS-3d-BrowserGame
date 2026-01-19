@@ -3,8 +3,8 @@
 // Handles post-processing effects, quality settings, and visual enhancements
 // ============================================================
 
-import { GRAPHICS_SETTINGS, graphicsLevel, setGraphicsLevel } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
+import { GRAPHICS_SETTINGS, graphicsLevel, setGraphicsLevel } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 
 /**
  * GraphicsManager - Manages post-processing and visual quality settings

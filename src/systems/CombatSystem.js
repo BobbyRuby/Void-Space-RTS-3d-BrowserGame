@@ -4,11 +4,11 @@
 // Uses MaterialPool for memory efficiency and GPU particles
 // ============================================================
 
-import { TEAM_COLORS, WEAPON_TYPES, UNITS, BUILDINGS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { MaterialPool } from '../core/MaterialPool.js';
-import { forceFieldSystem } from './ForceFieldSystem.js';
+import { TEAM_COLORS, WEAPON_TYPES, UNITS, BUILDINGS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { MaterialPool } from '../core/MaterialPool.js?v=20260119';
+import { forceFieldSystem } from './ForceFieldSystem.js?v=20260119';
 
 export class CombatSystem {
     constructor() {

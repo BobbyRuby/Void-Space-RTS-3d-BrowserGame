@@ -3,8 +3,8 @@
 // Configure map, resources, difficulty before starting game
 // ============================================================
 
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { CONFIG } from '../core/Config.js';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { CONFIG } from '../core/Config.js?v=20260119';
 
 /**
  * Pre-Game Lobby for game configuration

@@ -3,10 +3,10 @@
 // Group movement patterns and coordination
 // ============================================================
 
-import { CONFIG, TEAMS } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { pathfinding } from './Pathfinding.js';
+import { CONFIG, TEAMS } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { pathfinding } from './Pathfinding.js?v=20260119';
 
 // Formation types
 export const FormationType = {

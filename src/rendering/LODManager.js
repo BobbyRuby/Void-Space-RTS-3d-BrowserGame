@@ -3,8 +3,8 @@
 // Manages distance-based mesh detail switching for performance
 // ============================================================
 
-import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
+import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 
 /**
  * LOD Levels enum

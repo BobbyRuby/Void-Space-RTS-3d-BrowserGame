@@ -4,13 +4,13 @@
 // Optimized with MaterialPool for shared materials
 // ============================================================
 
-import { Entity } from './Entity.js';
-import { UNITS, TEAMS, TEAM_COLORS, CONFIG } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { gameState } from '../core/GameState.js';
-import { MaterialPool } from '../core/MaterialPool.js';
-import { LODManager } from '../rendering/LODManager.js';
-import { forceFieldSystem } from '../systems/ForceFieldSystem.js';
+import { Entity } from './Entity.js?v=20260119';
+import { UNITS, TEAMS, TEAM_COLORS, CONFIG } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { gameState } from '../core/GameState.js?v=20260119';
+import { MaterialPool } from '../core/MaterialPool.js?v=20260119';
+import { LODManager } from '../rendering/LODManager.js?v=20260119';
+import { forceFieldSystem } from '../systems/ForceFieldSystem.js?v=20260119';
 
 export class Unit extends Entity {
     constructor(x, z, team, type, scene) {

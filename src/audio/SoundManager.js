@@ -3,8 +3,8 @@
 // Handles all game audio: music, SFX, spatial audio
 // ============================================================
 
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { sceneManager } from '../rendering/SceneManager.js';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { sceneManager } from '../rendering/SceneManager.js?v=20260119';
 
 // Sound definitions with procedurally generated audio
 const SOUND_DEFS = {

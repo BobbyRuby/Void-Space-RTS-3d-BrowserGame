@@ -4,11 +4,11 @@
 // Optimized with thin instances for starfield (2000 -> 1 draw call)
 // ============================================================
 
-import { CONFIG, graphicsLevel } from '../core/Config.js';
-import { eventBus, GameEvents } from '../core/EventBus.js';
-import { MaterialPool } from '../core/MaterialPool.js';
-import { graphicsManager } from './GraphicsManager.js';
-import { LODManager } from './LODManager.js';
+import { CONFIG, graphicsLevel } from '../core/Config.js?v=20260119';
+import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
+import { MaterialPool } from '../core/MaterialPool.js?v=20260119';
+import { graphicsManager } from './GraphicsManager.js?v=20260119';
+import { LODManager } from './LODManager.js?v=20260119';
 
 export class SceneManager {
     constructor() {
