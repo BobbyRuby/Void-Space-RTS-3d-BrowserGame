@@ -410,7 +410,7 @@ export class Unit extends Entity {
                     this.fireAtMultiple(targetsInRange);
                     this.lastFire = now;
                 }
-            } else if (!this.holdPosition && this.attackTarget) {
+            } else if (!this.holdPosition && this.attackTarget && this.attackTarget.mesh) {
                 // Move toward closest target
                 this.moveToward(this.attackTarget.mesh.position.x, this.attackTarget.mesh.position.z, dt);
             }
