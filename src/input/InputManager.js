@@ -525,7 +525,12 @@ export class InputManager {
     }
 
     onMouseDown(e) {
-        console.log('MouseDown ENTRY:', e.button, e.target.id); // Debug at entry
+        // Only handle canvas clicks
+        if (e.target !== this.canvas) {
+            return;
+        }
+
+        console.log('MouseDown ENTRY:', e.button, e.target.id);
 
         if (e.button === 0) { // Left button
             // Don't start drag if in build mode (placing buildings)
@@ -537,7 +542,7 @@ export class InputManager {
             this.isDragging = true;
             this.dragStart = { x: e.clientX, y: e.clientY };
             this.dragEnd = { x: e.clientX, y: e.clientY };
-            console.log('MouseDown: drag started at', e.clientX, e.clientY);
+            console.log('MouseDown: drag started at', e.clientX, e.clientY, 'selectionBox:', !!this.selectionBox);
 
             eventBus.emit(GameEvents.INPUT_DRAG_START, {
                 screenX: e.clientX,
@@ -610,11 +615,14 @@ export class InputManager {
         const width = Math.abs(this.dragEnd.x - this.dragStart.x);
         const height = Math.abs(this.dragEnd.y - this.dragStart.y);
 
+        console.log('updateSelectionBox:', left, top, width, height);
+
         this.selectionBox.style.left = left + 'px';
         this.selectionBox.style.top = top + 'px';
         this.selectionBox.style.width = width + 'px';
         this.selectionBox.style.height = height + 'px';
         this.selectionBox.style.display = 'block';
+        this.selectionBox.style.zIndex = '9999'; // Force on top
     }
 
     hideSelectionBox() {
