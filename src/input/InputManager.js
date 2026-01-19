@@ -7,6 +7,7 @@ import { TEAMS } from '../core/Config.js?v=20260119';
 import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 import { gameState } from '../core/GameState.js?v=20260119';
 import { selectionSystem } from '../systems/SelectionSystem.js?v=20260119';
+import { forceFieldSystem } from '../systems/ForceFieldSystem.js?v=20260119';
 import { sceneManager } from '../rendering/SceneManager.js?v=20260119';
 import { buildMenu } from '../ui/BuildMenu.js?v=20260119';
 import { commandPanel } from '../ui/CommandPanel.js?v=20260119';
@@ -36,6 +37,9 @@ export class InputManager {
 
         // Camera rotation speed (radians per second)
         this.cameraRotateSpeed = 2;
+
+        // Force field preview lines
+        this.forceFieldPreviewLines = [];
     }
 
     init(canvas) {
@@ -85,6 +89,11 @@ export class InputManager {
 
         // Prevent default context menu
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Clear force field preview when exiting build mode
+        this._onBuildModeExit = eventBus.on(GameEvents.UI_BUILD_MODE_EXIT, () => {
+            this.clearForceFieldPreview();
+        });
     }
 
     // ===== Keyboard Input =====
@@ -592,6 +601,14 @@ export class InputManager {
                 this.updateSelectionBox();
             }
         }
+
+        // Update force field preview when in forceFieldGenerator build mode
+        if (gameState.buildMode === 'forceFieldGenerator') {
+            const worldPos = sceneManager.getWorldPosition(this.mouseX, this.mouseY);
+            if (worldPos) {
+                this.updateForceFieldPreview(worldPos);
+            }
+        }
     }
 
     // ===== Selection Box Visual =====
@@ -622,6 +639,61 @@ export class InputManager {
         if (this.selectionBox) {
             this.selectionBox.style.display = 'none';
         }
+    }
+
+    // ===== Force Field Preview =====
+
+    /**
+     * Update force field preview lines showing potential connections
+     */
+    updateForceFieldPreview(cursorPos) {
+        // Clear old preview lines
+        this.clearForceFieldPreview();
+
+        const connections = forceFieldSystem.getPreviewConnections(
+            cursorPos.x, cursorPos.z, TEAMS.PLAYER
+        );
+
+        const scene = sceneManager.scene;
+        if (!scene) return;
+
+        for (const conn of connections) {
+            // Create preview tube between cursor and generator
+            const path = [
+                new BABYLON.Vector3(cursorPos.x, 5, cursorPos.z),
+                new BABYLON.Vector3(conn.position.x, 5, conn.position.z)
+            ];
+
+            const line = BABYLON.MeshBuilder.CreateTube('ffPreview', {
+                path: path,
+                radius: 1,
+                tessellation: 8,
+                updatable: false
+            }, scene);
+
+            const mat = new BABYLON.StandardMaterial('ffPreviewMat', scene);
+            mat.emissiveColor = new BABYLON.Color3(0, 1, 0.5);
+            mat.alpha = 0.4;
+            mat.backFaceCulling = false;
+            line.material = mat;
+
+            this.forceFieldPreviewLines.push({ mesh: line, material: mat });
+        }
+    }
+
+    /**
+     * Clear all force field preview lines
+     */
+    clearForceFieldPreview() {
+        for (const preview of this.forceFieldPreviewLines) {
+            if (preview.mesh) {
+                preview.mesh.dispose();
+            }
+            if (preview.material) {
+                preview.material.dispose();
+            }
+        }
+        this.forceFieldPreviewLines = [];
     }
 
     // ===== Edge Scrolling (DISABLED) =====
@@ -710,6 +782,15 @@ export class InputManager {
         if (this.selectionBox && this.selectionBox.parentNode) {
             this.selectionBox.remove();
             this.selectionBox = null;
+        }
+
+        // Clear force field preview
+        this.clearForceFieldPreview();
+
+        // Unsubscribe from build mode exit event
+        if (this._onBuildModeExit) {
+            this._onBuildModeExit();
+            this._onBuildModeExit = null;
         }
 
         this.canvas = null;

@@ -131,6 +131,11 @@ export class ForceFieldSystem {
         const midpoint = BABYLON.Vector3.Center(posA, posB);
         const length = BABYLON.Vector3.Distance(posA, posB);
 
+        // Calculate angle in XZ plane for proper horizontal orientation
+        const dx = posB.x - posA.x;
+        const dz = posB.z - posA.z;
+        const angle = Math.atan2(dx, dz);
+
         // Create the beam mesh
         const beam = BABYLON.MeshBuilder.CreateCylinder('forceField_' + this.segmentIdCounter, {
             height: length,
@@ -141,9 +146,9 @@ export class ForceFieldSystem {
         beam.position = midpoint.clone();
         beam.position.y = 5; // Elevate the field
 
-        // Rotate beam to connect the two generators
-        beam.lookAt(posB);
-        beam.rotation.x += Math.PI / 2;
+        // Proper orientation: lay horizontal (rotate around X) then rotate to face direction
+        beam.rotation.x = Math.PI / 2;
+        beam.rotation.y = angle;
 
         // Create glowing material
         const mat = new BABYLON.StandardMaterial('forceFieldMat_' + this.segmentIdCounter, this.scene);
@@ -291,8 +296,8 @@ export class ForceFieldSystem {
      */
     checkUnitCollision(unit, newPos) {
         for (const segment of this.segments) {
-            // Skip destroyed segments
-            if (segment.destroyed) continue;
+            // Skip destroyed or power-disabled segments
+            if (segment.destroyed || segment.powerDisabled) continue;
 
             // Skip friendly fields
             if (segment.team === unit.team) continue;
@@ -318,8 +323,8 @@ export class ForceFieldSystem {
      */
     checkProjectileCollision(projectile, startPos, endPos) {
         for (const segment of this.segments) {
-            // Skip destroyed segments
-            if (segment.destroyed) continue;
+            // Skip destroyed or power-disabled segments
+            if (segment.destroyed || segment.powerDisabled) continue;
 
             // Skip friendly fields
             if (segment.team === projectile.team) continue;
@@ -406,6 +411,13 @@ export class ForceFieldSystem {
         const config = BUILDINGS.forceFieldGenerator;
         const now = performance.now();
 
+        // Check power status for each team (negative energy = power shortage)
+        const teamPowered = {};
+        for (let t = 0; t <= 5; t++) {
+            const res = gameState.getResources(t);
+            teamPowered[t] = res && res.energy >= 0;
+        }
+
         for (const segment of this.segments) {
             if (segment.destroyed) {
                 // Check if we should regenerate
@@ -415,6 +427,26 @@ export class ForceFieldSystem {
                     this.regenerateSegment(segment);
                 }
                 continue;
+            }
+
+            // Power check - disable field if team has power shortage
+            const hasPower = teamPowered[segment.team];
+            segment.powerDisabled = !hasPower;
+
+            if (segment.powerDisabled) {
+                // Visual: dim and flicker when unpowered
+                if (segment.material) {
+                    segment.material.alpha = 0.1 + 0.05 * Math.sin(now * 0.01);
+                }
+                if (segment.innerMesh) {
+                    segment.innerMesh.isVisible = false;
+                }
+                continue;
+            }
+
+            // Restore inner mesh visibility when powered
+            if (segment.innerMesh && !segment.innerMesh.isVisible) {
+                segment.innerMesh.isVisible = true;
             }
 
             // Pulse animation
@@ -485,21 +517,50 @@ export class ForceFieldSystem {
         const midpoint = BABYLON.Vector3.Center(posA, posB);
         const length = BABYLON.Vector3.Distance(posA, posB);
 
+        // Calculate direction angle in XZ plane
+        const dx = posB.x - posA.x;
+        const dz = posB.z - posA.z;
+        const angle = Math.atan2(dx, dz);
+
         segment.mesh.position.x = midpoint.x;
         segment.mesh.position.z = midpoint.z;
 
-        // Update cylinder height
-        segment.mesh.scaling.y = length / segment.mesh.getBoundingInfo().boundingBox.extendSizeWorld.y / 2;
+        // Update cylinder height via scaling
+        // The cylinder was created with height=length, so scale relative to that
+        const boundingInfo = segment.mesh.getBoundingInfo();
+        const baseHeight = boundingInfo.boundingBox.extendSizeWorld.y * 2 / segment.mesh.scaling.y;
+        segment.mesh.scaling.y = length / baseHeight;
 
-        // Rotate to face generator B
-        segment.mesh.lookAt(posB);
-        segment.mesh.rotation.x += Math.PI / 2;
+        // Proper orientation: horizontal then rotate to direction
+        segment.mesh.rotation.x = Math.PI / 2;
+        segment.mesh.rotation.y = angle;
 
         if (segment.innerMesh) {
             segment.innerMesh.position = segment.mesh.position.clone();
             segment.innerMesh.rotation = segment.mesh.rotation.clone();
             segment.innerMesh.scaling = segment.mesh.scaling.clone();
         }
+    }
+
+    /**
+     * Get preview connections for a potential generator placement
+     * @param {number} x - World X position
+     * @param {number} z - World Z position
+     * @param {number} team - Team ID
+     * @returns {Array} - Array of {generator, position, dist} for nearest 2 generators in range
+     */
+    getPreviewConnections(x, z, team) {
+        const config = BUILDINGS.forceFieldGenerator;
+        return this.generators
+            .filter(g => g.team === team && !g.dead && !g.isConstructing)
+            .map(g => ({
+                generator: g,
+                position: g.mesh.position.clone(),
+                dist: Math.hypot(g.mesh.position.x - x, g.mesh.position.z - z)
+            }))
+            .filter(c => c.dist <= config.maxRange)
+            .sort((a, b) => a.dist - b.dist)
+            .slice(0, 2);  // Max 2 connections per generator
     }
 
     /**
