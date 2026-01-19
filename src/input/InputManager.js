@@ -8,6 +8,7 @@ import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 import { gameState } from '../core/GameState.js?v=20260119';
 import { selectionSystem } from '../systems/SelectionSystem.js?v=20260119';
 import { forceFieldSystem } from '../systems/ForceFieldSystem.js?v=20260119';
+import { buildingPlacementSystem } from '../systems/BuildingPlacementSystem.js?v=20260119';
 import { sceneManager } from '../rendering/SceneManager.js?v=20260119';
 import { buildMenu } from '../ui/BuildMenu.js?v=20260119';
 import { commandPanel } from '../ui/CommandPanel.js?v=20260119';
@@ -345,7 +346,19 @@ export class InputManager {
             // 'buildMenu' is not a placeable building - ignore click
             return;
         } else if (gameState.buildMode) {
-            // Valid building type - place it
+            // Valid building type - check placement validity first
+            if (!buildingPlacementSystem.canPlace()) {
+                const reason = buildingPlacementSystem.getInvalidReason(worldPos.x, worldPos.z, TEAMS.PLAYER);
+                eventBus.emit(GameEvents.UI_ALERT, {
+                    message: reason || 'Cannot place building here',
+                    type: 'warning',
+                    team: TEAMS.PLAYER
+                });
+                // Don't exit build mode - let player try again
+                return;
+            }
+
+            // Placement is valid - place the building
             eventBus.emit(GameEvents.BUILDING_PLACED, {
                 type: gameState.buildMode,
                 position: worldPos,
@@ -607,8 +620,28 @@ export class InputManager {
             const worldPos = sceneManager.getWorldPosition(this.mouseX, this.mouseY);
             if (worldPos) {
                 this.updateForceFieldPreview(worldPos);
+                // Also update building placement preview for force field generators
+                buildingPlacementSystem.updatePreview(worldPos, gameState.buildMode, TEAMS.PLAYER);
             }
         }
+        // Update building placement preview for other building types
+        else if (gameState.buildMode && this.isBuildingType(gameState.buildMode)) {
+            const worldPos = sceneManager.getWorldPosition(this.mouseX, this.mouseY);
+            if (worldPos) {
+                buildingPlacementSystem.updatePreview(worldPos, gameState.buildMode, TEAMS.PLAYER);
+            }
+        }
+    }
+
+    /**
+     * Check if the build mode is an actual building type (not a command mode)
+     * @param {string} mode - The build mode string
+     * @returns {boolean}
+     */
+    isBuildingType(mode) {
+        // These are command modes, not building types
+        const commandModes = ['move', 'attackMove', 'patrol', 'guard', 'harvest', 'rallyPoint', 'buildMenu'];
+        return mode && !commandModes.includes(mode);
     }
 
     // ===== Selection Box Visual =====

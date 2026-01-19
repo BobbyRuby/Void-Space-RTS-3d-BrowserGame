@@ -21,6 +21,7 @@ import { fogOfWar } from '../systems/FogOfWar.js?v=20260119';
 import { pathfinding } from '../systems/Pathfinding.js?v=20260119';
 import { formationSystem } from '../systems/FormationSystem.js?v=20260119';
 import { forceFieldSystem } from '../systems/ForceFieldSystem.js?v=20260119';
+import { buildingPlacementSystem } from '../systems/BuildingPlacementSystem.js?v=20260119';
 import { inputManager } from '../input/InputManager.js?v=20260119';
 import { minimap } from '../ui/Minimap.js?v=20260119';
 import { mainPanel } from '../ui/MainPanel.js?v=20260119';
@@ -76,6 +77,7 @@ export class Game {
         fogOfWar.init(scene);
         formationSystem.init();
         forceFieldSystem.init(scene);
+        buildingPlacementSystem.init(scene);
 
         // Initialize audio
         this.updateLoadingProgress(45, 'Loading audio...');
@@ -303,8 +305,30 @@ export class Game {
         return unit;
     }
 
+    /**
+     * Check if a building can be placed at the given position
+     * @param {number} x - World X coordinate
+     * @param {number} z - World Z coordinate
+     * @param {number} team - The team placing the building
+     * @param {string} type - The building type
+     * @returns {Object} - { valid: boolean, reason?: string }
+     */
+    canPlaceBuilding(x, z, team, type) {
+        // Use the building placement system for validation
+        return buildingPlacementSystem.checkPlacementValid(x, z, team);
+    }
+
     createBuilding(x, z, team, type, scene) {
         const buildingDef = BUILDINGS[type];
+
+        // Check placement validity for player (AI bypasses this)
+        if (team === TEAMS.PLAYER) {
+            const placement = this.canPlaceBuilding(x, z, team, type);
+            if (!placement.valid) {
+                this.showAlert(placement.reason || 'Cannot place building here', 'danger');
+                return null;
+            }
+        }
 
         // Check cost
         if (team === TEAMS.PLAYER && !gameState.canAfford(team, buildingDef.cost)) {
@@ -692,6 +716,7 @@ export class Game {
         pathfinding.dispose();
         formationSystem.dispose();
         forceFieldSystem.dispose();
+        buildingPlacementSystem.dispose();
         inputManager.dispose();
         minimap.dispose();
         buildMenu.dispose();

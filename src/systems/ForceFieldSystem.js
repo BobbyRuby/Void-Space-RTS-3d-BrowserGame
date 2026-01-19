@@ -61,7 +61,7 @@ export class ForceFieldSystem {
 
     /**
      * Recalculate all connections between generators
-     * Uses nearest-neighbor algorithm: each generator connects to its 2 closest neighbors
+     * Connects all generators within range, but skips connections obstructed by other generators
      */
     updateConnections() {
         // Remove all existing segments
@@ -71,6 +71,7 @@ export class ForceFieldSystem {
         this.segments = [];
 
         const config = BUILDINGS.forceFieldGenerator;
+        const obstructionThreshold = config.size + 2;  // 8 units (generator size + buffer)
 
         // Group generators by team
         const byTeam = {};
@@ -80,7 +81,7 @@ export class ForceFieldSystem {
             byTeam[gen.team].push(gen);
         }
 
-        // For each team, connect nearest neighbors
+        // For each team, connect all generators within range (no obstruction)
         for (const team in byTeam) {
             const gens = byTeam[team];
             if (gens.length < 2) continue;
@@ -88,21 +89,26 @@ export class ForceFieldSystem {
             // Track existing connections to avoid duplicates
             const connectedPairs = new Set();
 
-            // For each generator, connect to 2 nearest neighbors
-            for (const gen of gens) {
-                const neighbors = gens
-                    .filter(g => g !== gen)
-                    .map(g => ({ gen: g, dist: this.distance(gen, g) }))
-                    .filter(n => n.dist <= config.maxRange)
-                    .sort((a, b) => a.dist - b.dist)
-                    .slice(0, 2);  // Max 2 neighbors
+            // Check ALL pairs of generators
+            for (let i = 0; i < gens.length; i++) {
+                for (let j = i + 1; j < gens.length; j++) {
+                    const genA = gens[i];
+                    const genB = gens[j];
 
-                for (const neighbor of neighbors) {
-                    // Create unique pair ID
-                    const pairId = [gen.id, neighbor.gen.id].sort().join('-');
+                    // Check if within range
+                    const dist = this.distance(genA, genB);
+                    if (dist > config.maxRange) continue;
+
+                    // Skip if another generator obstructs the path
+                    if (this.isConnectionObstructed(genA, genB, gens, obstructionThreshold)) {
+                        continue;
+                    }
+
+                    // Create the connection
+                    const pairId = [genA.id, genB.id].sort().join('-');
                     if (!connectedPairs.has(pairId)) {
                         connectedPairs.add(pairId);
-                        this.createFieldSegment(gen, neighbor.gen);
+                        this.createFieldSegment(genA, genB);
                     }
                 }
             }
@@ -116,6 +122,32 @@ export class ForceFieldSystem {
         const dx = genA.mesh.position.x - genB.mesh.position.x;
         const dz = genA.mesh.position.z - genB.mesh.position.z;
         return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /**
+     * Check if any generator obstructs the line between two generators
+     * @param {Building} genA - First generator
+     * @param {Building} genC - Second generator
+     * @param {Array} allGens - All generators of the same team
+     * @param {number} threshold - Distance threshold (generator size + buffer)
+     * @returns {boolean} - True if obstructed
+     */
+    isConnectionObstructed(genA, genC, allGens, threshold) {
+        const ax = genA.mesh.position.x, az = genA.mesh.position.z;
+        const cx = genC.mesh.position.x, cz = genC.mesh.position.z;
+
+        for (const genB of allGens) {
+            if (genB === genA || genB === genC) continue;
+            if (genB.dead || genB.isConstructing) continue;
+
+            const dist = this.pointToLineDistance(
+                genB.mesh.position.x, genB.mesh.position.z,
+                ax, az, cx, cz
+            );
+
+            if (dist < threshold) return true;
+        }
+        return false;
     }
 
     /**
@@ -547,20 +579,36 @@ export class ForceFieldSystem {
      * @param {number} x - World X position
      * @param {number} z - World Z position
      * @param {number} team - Team ID
-     * @returns {Array} - Array of {generator, position, dist} for nearest 2 generators in range
+     * @returns {Array} - Array of {generator, position, dist} for all non-obstructed generators in range
      */
     getPreviewConnections(x, z, team) {
         const config = BUILDINGS.forceFieldGenerator;
-        return this.generators
-            .filter(g => g.team === team && !g.dead && !g.isConstructing)
+        const obstructionThreshold = config.size + 2;  // 8 units
+
+        const validGens = this.generators.filter(
+            g => g.team === team && !g.dead && !g.isConstructing
+        );
+
+        return validGens
             .map(g => ({
                 generator: g,
                 position: g.mesh.position.clone(),
                 dist: Math.hypot(g.mesh.position.x - x, g.mesh.position.z - z)
             }))
             .filter(c => c.dist <= config.maxRange)
-            .sort((a, b) => a.dist - b.dist)
-            .slice(0, 2);  // Max 2 connections per generator
+            .filter(c => {
+                // Check if any other generator obstructs this preview connection
+                for (const other of validGens) {
+                    if (other === c.generator) continue;
+                    const dist = this.pointToLineDistance(
+                        other.mesh.position.x, other.mesh.position.z,
+                        x, z,
+                        c.generator.mesh.position.x, c.generator.mesh.position.z
+                    );
+                    if (dist < obstructionThreshold) return false;
+                }
+                return true;
+            });
     }
 
     /**
