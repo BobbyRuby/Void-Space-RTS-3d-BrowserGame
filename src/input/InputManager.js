@@ -525,8 +525,10 @@ export class InputManager {
     }
 
     onMouseDown(e) {
+        console.log('MouseDown RAW:', e.button, e.target.tagName, e.target.id, 'canvas?', e.target === this.canvas);
+
         // Only handle canvas clicks
-        if (e.target !== this.canvas) {
+        if (e.target.id !== 'renderCanvas') {
             return;
         }
 
