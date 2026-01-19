@@ -27,12 +27,18 @@ export class ForceFieldSystem {
             eventBus.on(GameEvents.BUILDING_COMPLETED, (data) => {
                 if (data.building.type === 'forceFieldGenerator') {
                     this.registerGenerator(data.building);
+                } else {
+                    // Any building can block connections - recalculate
+                    this.updateConnections();
                 }
             }),
 
             eventBus.on(GameEvents.BUILDING_DESTROYED, (data) => {
                 if (data.building.type === 'forceFieldGenerator') {
                     this.unregisterGenerator(data.building);
+                } else {
+                    // Building removed - may unblock connections
+                    this.updateConnections();
                 }
             })
         ];
@@ -61,7 +67,7 @@ export class ForceFieldSystem {
 
     /**
      * Recalculate all connections between generators
-     * Connects all generators within range, but skips connections obstructed by other generators
+     * Connects all generators within range, but skips connections obstructed by any building
      */
     updateConnections() {
         // Remove all existing segments
@@ -71,7 +77,6 @@ export class ForceFieldSystem {
         this.segments = [];
 
         const config = BUILDINGS.forceFieldGenerator;
-        const obstructionThreshold = config.size + 2;  // 8 units (generator size + buffer)
 
         // Group generators by team
         const byTeam = {};
@@ -99,8 +104,8 @@ export class ForceFieldSystem {
                     const dist = this.distance(genA, genB);
                     if (dist > config.maxRange) continue;
 
-                    // Skip if another generator obstructs the path
-                    if (this.isConnectionObstructed(genA, genB, gens, obstructionThreshold)) {
+                    // Skip if any building obstructs the path
+                    if (this.isConnectionObstructed(genA, genB)) {
                         continue;
                     }
 
@@ -125,27 +130,33 @@ export class ForceFieldSystem {
     }
 
     /**
-     * Check if any generator obstructs the line between two generators
+     * Check if any building obstructs the line between two generators
      * @param {Building} genA - First generator
      * @param {Building} genC - Second generator
-     * @param {Array} allGens - All generators of the same team
-     * @param {number} threshold - Distance threshold (generator size + buffer)
      * @returns {boolean} - True if obstructed
      */
-    isConnectionObstructed(genA, genC, allGens, threshold) {
+    isConnectionObstructed(genA, genC) {
         const ax = genA.mesh.position.x, az = genA.mesh.position.z;
         const cx = genC.mesh.position.x, cz = genC.mesh.position.z;
 
-        for (const genB of allGens) {
-            if (genB === genA || genB === genC) continue;
-            if (genB.dead || genB.isConstructing) continue;
+        // Get ALL buildings (not just generators)
+        const allBuildings = gameState.entities.filter(e =>
+            e.isBuilding && !e.dead && !e.isConstructing
+        );
+
+        for (const building of allBuildings) {
+            // Skip the two generators we're connecting
+            if (building === genA || building === genC) continue;
+
+            // Use building's size for threshold (larger buildings = larger block radius)
+            const blockRadius = (building.def?.size || 6) / 2 + 2;
 
             const dist = this.pointToLineDistance(
-                genB.mesh.position.x, genB.mesh.position.z,
+                building.mesh.position.x, building.mesh.position.z,
                 ax, az, cx, cz
             );
 
-            if (dist < threshold) return true;
+            if (dist < blockRadius) return true;
         }
         return false;
     }
@@ -583,10 +594,14 @@ export class ForceFieldSystem {
      */
     getPreviewConnections(x, z, team) {
         const config = BUILDINGS.forceFieldGenerator;
-        const obstructionThreshold = config.size + 2;  // 8 units
 
         const validGens = this.generators.filter(
             g => g.team === team && !g.dead && !g.isConstructing
+        );
+
+        // Get ALL buildings for obstruction check
+        const allBuildings = gameState.entities.filter(e =>
+            e.isBuilding && !e.dead && !e.isConstructing
         );
 
         return validGens
@@ -597,15 +612,20 @@ export class ForceFieldSystem {
             }))
             .filter(c => c.dist <= config.maxRange)
             .filter(c => {
-                // Check if any other generator obstructs this preview connection
-                for (const other of validGens) {
-                    if (other === c.generator) continue;
+                // Check if any building obstructs this preview connection
+                for (const building of allBuildings) {
+                    // Skip the generator we're connecting to
+                    if (building === c.generator) continue;
+
+                    // Use building's size for threshold
+                    const blockRadius = (building.def?.size || 6) / 2 + 2;
+
                     const dist = this.pointToLineDistance(
-                        other.mesh.position.x, other.mesh.position.z,
+                        building.mesh.position.x, building.mesh.position.z,
                         x, z,
                         c.generator.mesh.position.x, c.generator.mesh.position.z
                     );
-                    if (dist < obstructionThreshold) return false;
+                    if (dist < blockRadius) return false;
                 }
                 return true;
             });
