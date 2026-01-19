@@ -122,8 +122,11 @@ export class FogOfWar {
 
     setupEventListeners() {
         // Update visibility when entities move or are created
-        eventBus.on(GameEvents.ENTITY_CREATED, () => this.markDirty());
-        eventBus.on(GameEvents.ENTITY_DESTROYED, () => this.markDirty());
+        // Store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.ENTITY_CREATED, () => this.markDirty()),
+            eventBus.on(GameEvents.ENTITY_DESTROYED, () => this.markDirty())
+        ];
     }
 
     markDirty() {
@@ -390,6 +393,10 @@ export class FogOfWar {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         if (this.fogMesh) {
             this.fogMesh.dispose();
         }

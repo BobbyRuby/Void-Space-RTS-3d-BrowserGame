@@ -75,6 +75,11 @@ export class Unit extends Entity {
         // Collect LOD meshes from the unit hierarchy
         const lodMeshes = this.collectLODMeshes();
 
+        // Guard: skip registration if no valid meshes found
+        if (!lodMeshes) {
+            return;
+        }
+
         // Register with LOD manager
         LODManager.register(
             this.id,
@@ -87,21 +92,23 @@ export class Unit extends Entity {
 
     /**
      * Collect meshes for LOD levels from the unit's mesh hierarchy
-     * @returns {Object} - { high: Mesh, medium: Mesh, low: Mesh }
+     * @returns {Object|null} - { high: Mesh, medium: Mesh, low: Mesh } or null if no valid mesh
      */
     collectLODMeshes() {
-        // Find the primary mesh in the hierarchy
-        // For now, we use the same mesh for all LOD levels
-        // Enhanced ships could provide multiple detail levels
-        let primaryMesh = null;
-
-        if (this.mesh && this.mesh.getChildMeshes) {
-            const children = this.mesh.getChildMeshes();
-            if (children.length > 0) {
-                // Find the largest/main mesh (usually the body)
-                primaryMesh = children.find(m => m.name.includes('body') || m.name.includes('hull')) || children[0];
-            }
+        // Guard: early return if mesh is invalid
+        if (!this.mesh || !this.mesh.getChildMeshes) {
+            return null;
         }
+
+        const children = this.mesh.getChildMeshes();
+
+        // Guard: early return if no children found
+        if (!children || children.length === 0) {
+            return null;
+        }
+
+        // Find the largest/main mesh (usually the body)
+        const primaryMesh = children.find(m => m.name.includes('body') || m.name.includes('hull')) || children[0];
 
         // Return same mesh for all levels (LOD manager handles visibility)
         return {

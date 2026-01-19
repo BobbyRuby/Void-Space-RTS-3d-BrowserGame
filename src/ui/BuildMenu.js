@@ -96,6 +96,11 @@ export class BuildMenu {
         this.buildingList = document.getElementById('buildingList');
         this.unitList = document.getElementById('unitList');
         this.buildInfo = document.getElementById('buildInfo');
+
+        // Cache build info child elements to avoid repeated DOM queries
+        this._infoName = this.buildInfo.querySelector('.info-name');
+        this._infoDesc = this.buildInfo.querySelector('.info-desc');
+        this._infoCost = this.buildInfo.querySelector('.info-cost');
     }
 
     injectStyles() {
@@ -290,10 +295,12 @@ export class BuildMenu {
             tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
         });
 
-        // Game events
-        eventBus.on(GameEvents.BUILDING_COMPLETED, () => this.updateAvailableItems());
-        eventBus.on(GameEvents.RESOURCES_CHANGED, () => this.updateItemStates());
-        eventBus.on(GameEvents.RESOURCE_CHANGED, () => this.updateItemStates());
+        // Game events - store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.BUILDING_COMPLETED, () => this.updateAvailableItems()),
+            eventBus.on(GameEvents.RESOURCE_CHANGED, () => this.updateItemStates())
+            // Note: RESOURCES_CHANGED removed - redundant with RESOURCE_CHANGED
+        ];
     }
 
     switchTab(tab) {
@@ -308,10 +315,10 @@ export class BuildMenu {
         this.buildingList.classList.toggle('hidden', tab !== 'buildings');
         this.unitList.classList.toggle('hidden', tab !== 'units');
 
-        // Update info
-        this.buildInfo.querySelector('.info-name').textContent = 'Hover to see info';
-        this.buildInfo.querySelector('.info-desc').textContent = '';
-        this.buildInfo.querySelector('.info-cost').innerHTML = '';
+        // Update info using cached elements
+        if (this._infoName) this._infoName.textContent = 'Hover to see info';
+        if (this._infoDesc) this._infoDesc.textContent = '';
+        if (this._infoCost) this._infoCost.innerHTML = '';
     }
 
     updateAvailableItems() {
@@ -420,40 +427,46 @@ export class BuildMenu {
         const playerRes = gameState.getResources(TEAMS.PLAYER) || {};
         cost = cost || normalizeCost(config.cost);
 
-        this.buildInfo.querySelector('.info-name').textContent = item.name;
-        this.buildInfo.querySelector('.info-desc').textContent = item.desc;
-        this.buildInfo.querySelector('.info-cost').innerHTML = `
-            <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
-                💰 ${cost.credits}
-            </span>
-            ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
-                🪨 ${cost.ore}
-            </span>` : ''}
-            ${cost.crystals ? `<span class="cost-item ${(playerRes.crystals || 0) < cost.crystals ? 'insufficient' : ''}">
-                💎 ${cost.crystals}
-            </span>` : ''}
-            ${cost.energy ? `<span class="cost-item ${(playerRes.energy || 0) < cost.energy ? 'insufficient' : ''}">
-                ⚡ ${cost.energy}
-            </span>` : ''}
-        `;
+        // Use cached elements
+        if (this._infoName) this._infoName.textContent = item.name;
+        if (this._infoDesc) this._infoDesc.textContent = item.desc;
+        if (this._infoCost) {
+            this._infoCost.innerHTML = `
+                <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
+                    💰 ${cost.credits}
+                </span>
+                ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
+                    🪨 ${cost.ore}
+                </span>` : ''}
+                ${cost.crystals ? `<span class="cost-item ${(playerRes.crystals || 0) < cost.crystals ? 'insufficient' : ''}">
+                    💎 ${cost.crystals}
+                </span>` : ''}
+                ${cost.energy ? `<span class="cost-item ${(playerRes.energy || 0) < cost.energy ? 'insufficient' : ''}">
+                    ⚡ ${cost.energy}
+                </span>` : ''}
+            `;
+        }
     }
 
     showUnitInfo(item, config, cost) {
         const playerRes = gameState.getResources(TEAMS.PLAYER) || {};
         cost = cost || normalizeCost(config.cost);
 
-        this.buildInfo.querySelector('.info-name').textContent = item.name;
-        this.buildInfo.querySelector('.info-desc').textContent = item.desc;
-        this.buildInfo.querySelector('.info-cost').innerHTML = `
-            <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
-                💰 ${cost.credits}
-            </span>
-            ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
-                🪨 ${cost.ore}
-            </span>` : ''}
-            <span class="cost-item">⏱ ${(config.buildTime || 0)}s</span>
-            <span class="cost-item">👥 ${config.supply || 1}</span>
-        `;
+        // Use cached elements
+        if (this._infoName) this._infoName.textContent = item.name;
+        if (this._infoDesc) this._infoDesc.textContent = item.desc;
+        if (this._infoCost) {
+            this._infoCost.innerHTML = `
+                <span class="cost-item ${(playerRes.credits || 0) < cost.credits ? 'insufficient' : ''}">
+                    💰 ${cost.credits}
+                </span>
+                ${cost.ore ? `<span class="cost-item ${(playerRes.ore || 0) < cost.ore ? 'insufficient' : ''}">
+                    🪨 ${cost.ore}
+                </span>` : ''}
+                <span class="cost-item">⏱ ${(config.buildTime || 0)}s</span>
+                <span class="cost-item">👥 ${config.supply || 1}</span>
+            `;
+        }
     }
 
     updateItemStates() {
@@ -516,23 +529,23 @@ export class BuildMenu {
     }
 
     hasBuilding(type) {
-        return gameState.entities.some(e =>
-            e.team === TEAMS.PLAYER &&
-            e.type === type &&
-            !e.dead &&
-            !e.isConstructing
+        // Use cached buildings list from GameState for better performance
+        const buildings = gameState.getBuildingsByTeam(TEAMS.PLAYER);
+        return buildings.some(b =>
+            b.type === type &&
+            !b.dead &&
+            !b.isConstructing
         );
     }
 
     hasProductionBuilding(unitType) {
         // Check if player has a building that can produce this unit type
-        // Buildings have 'canBuild' arrays listing what they can produce
-        return gameState.entities.some(e =>
-            e.team === TEAMS.PLAYER &&
-            e.isBuilding &&
-            !e.dead &&
-            !e.isConstructing &&
-            e.def?.canBuild?.includes(unitType)
+        // Use cached buildings list from GameState for better performance
+        const buildings = gameState.getBuildingsByTeam(TEAMS.PLAYER);
+        return buildings.some(b =>
+            !b.dead &&
+            !b.isConstructing &&
+            b.def?.canBuild?.includes(unitType)
         );
     }
 
@@ -601,6 +614,15 @@ export class BuildMenu {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
+        // Clear cached element references
+        this._infoName = null;
+        this._infoDesc = null;
+        this._infoCost = null;
+
         if (this.container) {
             this.container.remove();
         }

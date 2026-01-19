@@ -286,14 +286,17 @@ export class CommandPanel {
     }
 
     setupEventListeners() {
-        eventBus.on(GameEvents.UI_SELECTION_CHANGED, (data) => {
-            this.onSelectionChanged(data.selected || data.entities || (Array.isArray(data) ? data : []));
-        });
+        // Store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.UI_SELECTION_CHANGED, (data) => {
+                this.onSelectionChanged(data.selected || data.entities || (Array.isArray(data) ? data : []));
+            }),
 
-        // Listen for command completions
-        eventBus.on(GameEvents.COMMAND_COMPLETE, () => {
-            this.clearCommandMode();
-        });
+            // Listen for command completions
+            eventBus.on(GameEvents.COMMAND_COMPLETE, () => {
+                this.clearCommandMode();
+            })
+        ];
     }
 
     onSelectionChanged(selection) {
@@ -395,29 +398,24 @@ export class CommandPanel {
 
     returnCargoCommand() {
         for (const entity of this.selectedEntities) {
-            if (entity.type === 'harvester' && entity.cargo > 0) {
-                // Find nearest refinery
-                const refineries = gameState.entities.filter(e =>
-                    e.type === 'refinery' &&
-                    e.team === entity.team &&
-                    !e.dead &&
-                    !e.isConstructing
-                );
+            if (entity.type === 'harvester' && entity.cargo > 0 && entity.mesh) {
+                // Find nearest refinery using cached building list
+                const refineries = gameState.getBuildingsByType(entity.team, 'refinery')
+                    .filter(r => !r.dead && !r.isConstructing && r.mesh);
 
-                if (refineries.length > 0 && entity.mesh) {
+                if (refineries.length > 0) {
                     const pos = entity.mesh.position;
                     let nearest = refineries[0];
-                    let nearestDist = Infinity;
+                    let nearestDistSq = Infinity;
 
+                    // Use squared distance to avoid sqrt (faster for comparison)
                     for (const ref of refineries) {
-                        if (ref.mesh) {
-                            const dx = ref.mesh.position.x - pos.x;
-                            const dz = ref.mesh.position.z - pos.z;
-                            const dist = Math.sqrt(dx * dx + dz * dz);
-                            if (dist < nearestDist) {
-                                nearestDist = dist;
-                                nearest = ref;
-                            }
+                        const dx = ref.mesh.position.x - pos.x;
+                        const dz = ref.mesh.position.z - pos.z;
+                        const distSq = dx * dx + dz * dz;
+                        if (distSq < nearestDistSq) {
+                            nearestDistSq = distSq;
+                            nearest = ref;
                         }
                     }
 
@@ -520,6 +518,10 @@ export class CommandPanel {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         this.clearCommandMode();
         if (this.container) {
             this.container.remove();

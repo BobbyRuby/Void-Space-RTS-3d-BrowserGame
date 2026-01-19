@@ -13,10 +13,14 @@ export class AlienUnit extends Unit {
         const alienDef = ALIEN_UNITS[alienType];
 
         // Temporarily add to UNITS for base constructor
+        // Use try-finally to ensure cleanup even if super() throws
         const tempKey = 'alien_' + alienType;
         UNITS[tempKey] = alienDef;
-        super(x, z, team, tempKey, scene);
-        delete UNITS[tempKey];
+        try {
+            super(x, z, team, tempKey, scene);
+        } finally {
+            delete UNITS[tempKey];
+        }
 
         this.alienType = alienType;
         this.homeX = x;

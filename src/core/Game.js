@@ -416,25 +416,33 @@ export class Game {
     // ===== Resource Management =====
 
     updateResourceCapacity() {
-        // Calculate max energy and supply for all teams
+        // Calculate max energy and supply for all teams in a single pass
+        // Initialize accumulators for each team
+        const teamStats = {};
         for (let t = 0; t <= 5; t++) {
-            let maxEnergy = 0;
-            let maxSupply = 0;
-            let energyDrain = 0;
+            teamStats[t] = { maxEnergy: 0, maxSupply: 0, energyDrain: 0 };
+        }
 
-            for (const building of gameState.buildings) {
-                if (building.dead || building.team !== t || building.isConstructing) continue;
+        // Single pass through all buildings (fixes O(teams * buildings) -> O(buildings))
+        for (const building of gameState.buildings) {
+            if (building.dead || building.isConstructing) continue;
 
-                const def = building.def;
-                maxEnergy += def.energyProduction || 0;
-                energyDrain += def.energyDrain || 0;
-                maxSupply += def.supplyProvided || 0;
-            }
+            const t = building.team;
+            if (t < 0 || t > 5) continue;
 
+            const def = building.def;
+            teamStats[t].maxEnergy += def.energyProduction || 0;
+            teamStats[t].energyDrain += def.energyDrain || 0;
+            teamStats[t].maxSupply += def.supplyProvided || 0;
+        }
+
+        // Apply stats to each team's resources
+        for (let t = 0; t <= 5; t++) {
             const res = gameState.getResources(t);
-            res.maxEnergy = maxEnergy;
-            res.energy = maxEnergy - energyDrain;
-            res.maxSupply = maxSupply;
+            const stats = teamStats[t];
+            res.maxEnergy = stats.maxEnergy;
+            res.energy = stats.maxEnergy - stats.energyDrain;
+            res.maxSupply = stats.maxSupply;
         }
     }
 

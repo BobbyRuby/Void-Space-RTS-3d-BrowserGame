@@ -11,10 +11,28 @@ class AIPlayer {
     constructor(team) {
         this.team = team;
         this.lastAction = 0;
-        this.actionInterval = 2000 + Math.random() * 1000;
-        this.buildOrder = ['powerPlant', 'refinery', 'shipyard', 'supplyDepot'];
         this.buildIndex = 0;
-        this.aggressionLevel = 0.3 + Math.random() * 0.4;
+
+        // Expanded build order with turrets and more economic buildings
+        this.buildOrder = [
+            'powerPlant',
+            'refinery',
+            'shipyard',
+            'supplyDepot',
+            'turret',           // Defense around base
+            'turret',           // Second turret
+            'supplyDepot',      // More supply for bigger army
+            'refinery',         // Second refinery for more income
+            'turret',           // Third turret
+            'powerPlant',       // More power for turrets
+            'advancedShipyard', // Capital ship production
+            'supplyDepot',      // More supply
+            'turret',           // Fourth turret
+        ];
+
+        // Apply difficulty scaling
+        const difficulty = CONFIG.AI_DIFFICULTY || 'normal';
+        this.applyDifficultySettings(difficulty);
 
         // Filter caches to reduce redundant array.filter() calls
         this.cacheExpiry = 500; // Cache valid for 500ms
@@ -25,6 +43,37 @@ class AIPlayer {
             myHarvesters: { data: null, timestamp: 0 },
             hostileEntities: { data: null, timestamp: 0 }
         };
+    }
+
+    /**
+     * Apply difficulty-based settings
+     * @param {string} difficulty - 'easy', 'normal', or 'hard'
+     */
+    applyDifficultySettings(difficulty) {
+        switch (difficulty) {
+            case 'easy':
+                this.minAttackForce = 5;
+                this.aggressionLevel = 0.2;
+                this.buildSpeedMultiplier = 0.7;
+                this.maxHarvesters = 4;
+                this.actionInterval = 2500 + Math.random() * 1500; // Slower decisions
+                break;
+            case 'hard':
+                this.minAttackForce = 10;
+                this.aggressionLevel = 0.6;
+                this.buildSpeedMultiplier = 1.3;
+                this.maxHarvesters = 8;
+                this.actionInterval = 1500 + Math.random() * 500; // Faster decisions
+                break;
+            case 'normal':
+            default:
+                this.minAttackForce = 8;
+                this.aggressionLevel = 0.4;
+                this.buildSpeedMultiplier = 1.0;
+                this.maxHarvesters = 6;
+                this.actionInterval = 2000 + Math.random() * 1000;
+                break;
+        }
     }
 
     /**
@@ -118,18 +167,51 @@ class AIPlayer {
             now
         );
 
-        // Find shipyard
+        // Find regular shipyard for small/medium ships
         const shipyard = myBuildings.find(e =>
-            (e.type === 'shipyard' || e.type === 'advancedShipyard') && !e.isConstructing
+            e.type === 'shipyard' && !e.isConstructing
         );
 
+        // Find advanced shipyard for capital ships
+        const advShipyard = myBuildings.find(e =>
+            e.type === 'advancedShipyard' && !e.isConstructing
+        );
+
+        // Build from regular shipyard - expanded unit variety
         if (shipyard && shipyard.buildQueue.length < 3) {
-            const unitTypes = ['interceptor', 'striker', 'heavy'];
-            const randomUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
-            shipyard.queueUnit(randomUnit);
+            // Full variety of small/medium ships
+            const unitTypes = ['interceptor', 'striker', 'heavy', 'bomber', 'gunship'];
+            // Weight toward cheaper units early, more expensive units when wealthy
+            let selectedUnit;
+            if (res.credits < 300) {
+                // Low resources - build cheap interceptors
+                selectedUnit = 'interceptor';
+            } else if (res.credits < 500) {
+                // Medium resources - strikers and interceptors
+                const midUnits = ['interceptor', 'striker', 'heavy'];
+                selectedUnit = midUnits[Math.floor(Math.random() * midUnits.length)];
+            } else {
+                // High resources - any unit type
+                selectedUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
+            }
+            shipyard.queueUnit(selectedUnit);
         }
 
-        // Build harvesters from command center
+        // Build capital ships from advanced shipyard when we have resources
+        if (advShipyard && advShipyard.buildQueue.length < 2) {
+            const capitalTypes = ['frigate', 'cruiser'];
+            // Build bigger ships when we have lots of resources
+            if (res.credits > 1200) {
+                capitalTypes.push('battlecruiser');
+            }
+            if (res.credits > 2000) {
+                capitalTypes.push('dreadnought');
+            }
+            const selectedCapital = capitalTypes[Math.floor(Math.random() * capitalTypes.length)];
+            advShipyard.queueUnit(selectedCapital);
+        }
+
+        // Build harvesters from command center - use difficulty-based cap
         const cc = myBuildings.find(e =>
             e.type === 'commandCenter' && !e.isConstructing
         );
@@ -142,7 +224,8 @@ class AIPlayer {
                 gameState.units,
                 now
             );
-            if (harvesters.length < 3) {
+            // Use difficulty-based harvester cap
+            if (harvesters.length < this.maxHarvesters) {
                 cc.queueUnit('harvester');
             }
         }
@@ -198,7 +281,7 @@ class AIPlayer {
     }
 
     commandMilitary(now) {
-        // Use cached military units list
+        // Use cached military units list - get ALL idle military units
         const militaryUnits = this.getCached(
             'myMilitary',
             e => !e.dead && e.team === this.team && e.type !== 'harvester' && !e.attackTarget,
@@ -206,7 +289,9 @@ class AIPlayer {
             now
         );
 
-        if (militaryUnits.length > 0 && Math.random() < this.aggressionLevel) {
+        // Only attack when we have built up a proper force (difficulty-based threshold)
+        // AND the aggression check passes
+        if (militaryUnits.length >= this.minAttackForce && Math.random() < this.aggressionLevel) {
             // Use cached hostile entities
             const targets = this.getCached(
                 'hostileEntities',
@@ -216,7 +301,29 @@ class AIPlayer {
             );
 
             if (targets.length > 0) {
-                const target = targets[Math.floor(Math.random() * targets.length)];
+                // Prioritize buildings over units for strategic attacks
+                const buildings = targets.filter(t => t.isBuilding);
+                const units = targets.filter(t => !t.isBuilding);
+
+                // Target priority: enemy production buildings > units > other buildings
+                let target;
+                const productionBuildings = buildings.filter(b =>
+                    b.type === 'shipyard' || b.type === 'advancedShipyard' || b.type === 'commandCenter'
+                );
+
+                if (productionBuildings.length > 0) {
+                    // Attack enemy production first
+                    target = productionBuildings[Math.floor(Math.random() * productionBuildings.length)];
+                } else if (units.length > 0 && Math.random() < 0.6) {
+                    // 60% chance to attack enemy military
+                    target = units[Math.floor(Math.random() * units.length)];
+                } else if (buildings.length > 0) {
+                    // Attack any enemy building
+                    target = buildings[Math.floor(Math.random() * buildings.length)];
+                } else {
+                    // Fall back to any target
+                    target = targets[Math.floor(Math.random() * targets.length)];
+                }
 
                 eventBus.emit(GameEvents.AI_ATTACK, {
                     team: this.team,
@@ -224,6 +331,7 @@ class AIPlayer {
                     target
                 });
 
+                // Send ALL idle military units as a coordinated attack wave
                 for (const unit of militaryUnits) {
                     if (target.mesh) {
                         unit.attackMove(target.mesh.position.x, target.mesh.position.z);
@@ -249,11 +357,14 @@ export class AISystem {
         }
 
         // Listen for AI decision events to create buildings
-        eventBus.on(GameEvents.AI_DECISION, (data) => {
-            if (data.action === 'build') {
-                this.handleAIBuild(data);
-            }
-        });
+        // Store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.AI_DECISION, (data) => {
+                if (data.action === 'build') {
+                    this.handleAIBuild(data);
+                }
+            })
+        ];
     }
 
     handleAIBuild(data) {
@@ -285,6 +396,10 @@ export class AISystem {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         this.aiPlayers = [];
     }
 }

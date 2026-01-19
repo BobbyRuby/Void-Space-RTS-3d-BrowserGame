@@ -60,9 +60,11 @@ export class InputManager {
             console.log('InputManager: Created selection box element');
         }
 
-        // Keyboard events
-        window.addEventListener('keydown', (e) => this.onKeyDown(e));
-        window.addEventListener('keyup', (e) => this.onKeyUp(e));
+        // Keyboard events - store bound handlers for cleanup
+        this._onKeyDown = (e) => this.onKeyDown(e);
+        this._onKeyUp = (e) => this.onKeyUp(e);
+        window.addEventListener('keydown', this._onKeyDown);
+        window.addEventListener('keyup', this._onKeyUp);
 
         // Mouse events
         canvas.addEventListener('click', (e) => this.onClick(e));
@@ -70,31 +72,16 @@ export class InputManager {
         canvas.addEventListener('contextmenu', (e) => this.onRightClick(e));
         // Use capture phase to ensure we get events before BabylonJS
         // Using pointer events instead of mouse events to avoid Babylon.js conflicts
-        canvas.addEventListener('pointerdown', (e) => this.onMouseDown(e), true);
-        canvas.addEventListener('pointerup', (e) => this.onMouseUp(e), true);
-        canvas.addEventListener('pointermove', (e) => this.onMouseMove(e), true);
+        // Store bound handlers for cleanup
+        this._onMouseDown = (e) => this.onMouseDown(e);
+        this._onMouseUp = (e) => this.onMouseUp(e);
+        this._onMouseMove = (e) => this.onMouseMove(e);
 
-        // Debug: Add a raw test listener
-        canvas.addEventListener('pointerdown', (e) => {
-            console.log('RAW pointerdown on canvas:', e.button, e.target.tagName);
-        }, true);
+        canvas.addEventListener('pointerdown', this._onMouseDown, true);
+        canvas.addEventListener('pointerup', this._onMouseUp, true);
+        canvas.addEventListener('pointermove', this._onMouseMove, true);
 
         console.log('InputManager: All event listeners attached to canvas');
-
-        // Debug: Window-level listener (fires before EVERYTHING)
-        window.addEventListener('pointerdown', (e) => {
-            console.log('WINDOW pointerdown:', e.clientX, e.clientY, '->', e.target.tagName, e.target.id || e.target.className);
-        }, true);
-
-        // Debug: Also listen on document to see if events are happening at all
-        document.addEventListener('pointerdown', (e) => {
-            console.log('DOCUMENT pointerdown:', e.target.tagName, e.target.id || e.target.className);
-            // Show what element is at this position
-            const elemAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-            if (elemAtPoint !== e.target) {
-                console.log('  -> Element at point:', elemAtPoint?.tagName, elemAtPoint?.id || elemAtPoint?.className);
-            }
-        }, true);
 
         // Prevent default context menu
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -692,6 +679,40 @@ export class InputManager {
 
     dispose() {
         this.keysDown.clear();
+
+        // Remove keyboard listeners
+        if (this._onKeyDown) {
+            window.removeEventListener('keydown', this._onKeyDown);
+            this._onKeyDown = null;
+        }
+        if (this._onKeyUp) {
+            window.removeEventListener('keyup', this._onKeyUp);
+            this._onKeyUp = null;
+        }
+
+        // Remove canvas listeners
+        if (this.canvas) {
+            if (this._onMouseDown) {
+                this.canvas.removeEventListener('pointerdown', this._onMouseDown, true);
+                this._onMouseDown = null;
+            }
+            if (this._onMouseUp) {
+                this.canvas.removeEventListener('pointerup', this._onMouseUp, true);
+                this._onMouseUp = null;
+            }
+            if (this._onMouseMove) {
+                this.canvas.removeEventListener('pointermove', this._onMouseMove, true);
+                this._onMouseMove = null;
+            }
+        }
+
+        // Remove selection box element
+        if (this.selectionBox && this.selectionBox.parentNode) {
+            this.selectionBox.remove();
+            this.selectionBox = null;
+        }
+
+        this.canvas = null;
     }
 }
 

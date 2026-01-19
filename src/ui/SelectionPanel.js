@@ -429,9 +429,12 @@ export class SelectionPanel {
     }
 
     setupEventListeners() {
-        eventBus.on(GameEvents.UI_SELECTION_CHANGED, (data) => {
-            this.onSelectionChanged(data.selected || data.entities || (Array.isArray(data) ? data : []));
-        });
+        // Store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.UI_SELECTION_CHANGED, (data) => {
+                this.onSelectionChanged(data.selected || data.entities || (Array.isArray(data) ? data : []));
+            })
+        ];
 
         // Start update loop for real-time stats
         this.updateInterval = setInterval(() => this.updateDisplay(), 100);
@@ -789,8 +792,13 @@ export class SelectionPanel {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
+            this.updateInterval = null;
         }
         if (this.container) {
             this.container.remove();

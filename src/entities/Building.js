@@ -577,6 +577,12 @@ export class Building extends Entity {
         if (this.buildQueue.length > 0) {
             const building = this.buildQueue[0];
             const unitDef = UNITS[building.type];
+            // Guard: skip if unitDef is invalid
+            if (!unitDef) {
+                this.buildQueue.shift();
+                this.buildProgress = 0;
+                return;
+            }
             this.buildProgress += dt / unitDef.buildTime;
 
             if (this.buildProgress >= 1) {
@@ -592,7 +598,7 @@ export class Building extends Entity {
             if (processAmount > 0) {
                 this.storedOre -= processAmount;
                 gameState.modifyResource(this.team, 'ore', -processAmount);
-                gameState.modifyResource(this.team, 'credits', processAmount * 2);
+                gameState.modifyResource(this.team, 'credits', processAmount * CONFIG.ORE_VALUE_MULTIPLIER);
             }
 
             const crystalProcess = Math.min(this.storedCrystals, this.def.processRate * 0.5 * dt);
@@ -747,6 +753,11 @@ export class Building extends Entity {
 
     queueUnit(unitType) {
         const unitDef = UNITS[unitType];
+        // Guard: skip if unitDef is invalid
+        if (!unitDef) {
+            console.warn(`queueUnit: Unknown unit type '${unitType}'`);
+            return false;
+        }
         const res = gameState.getResources(this.team);
 
         // Normalize cost - handle both number and object formats
@@ -813,6 +824,11 @@ export class Building extends Entity {
 
     spawnUnit(unitType) {
         const unitDef = UNITS[unitType];
+        // Guard: skip if unitDef is invalid
+        if (!unitDef) {
+            console.warn(`spawnUnit: Unknown unit type '${unitType}'`);
+            return;
+        }
         const angle = Math.random() * Math.PI * 2;
         const dist = this.size + 8;
         const x = this.mesh.position.x + Math.cos(angle) * dist;

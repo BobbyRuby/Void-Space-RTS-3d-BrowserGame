@@ -96,53 +96,56 @@ export class SoundManager {
     }
 
     setupEventListeners() {
-        // Combat events
-        eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => {
-            const soundType = data.damage > 50 ? 'laserHeavy' : data.damage > 20 ? 'laserMedium' : 'laserSmall';
-            this.playSpatial(soundType, data.startPos);
-        });
+        // Store unsubscribe functions for cleanup
+        this._unsubs = [
+            // Combat events
+            eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => {
+                const soundType = data.damage > 50 ? 'laserHeavy' : data.damage > 20 ? 'laserMedium' : 'laserSmall';
+                this.playSpatial(soundType, data.startPos);
+            }),
 
-        eventBus.on(GameEvents.COMBAT_EXPLOSION, (data) => {
-            const soundType = data.size > 10 ? 'explosionLarge' : 'explosion';
-            this.playSpatial(soundType, data.position);
-        });
+            eventBus.on(GameEvents.COMBAT_EXPLOSION, (data) => {
+                const soundType = data.size > 10 ? 'explosionLarge' : 'explosion';
+                this.playSpatial(soundType, data.position);
+            }),
 
-        eventBus.on(GameEvents.ENTITY_DAMAGED, (data) => {
-            if (data.entity.shield > 0) {
-                this.playSpatial('shield', data.entity.position);
-            }
-        });
+            eventBus.on(GameEvents.ENTITY_DAMAGED, (data) => {
+                if (data.entity.shield > 0) {
+                    this.playSpatial('shield', data.entity.position);
+                }
+            }),
 
-        // UI events
-        eventBus.on(GameEvents.ENTITY_SELECTED, () => {
-            this.play('select');
-        });
+            // UI events
+            eventBus.on(GameEvents.ENTITY_SELECTED, () => {
+                this.play('select');
+            }),
 
-        eventBus.on(GameEvents.BUILDING_PLACED, () => {
-            this.play('buildStart');
-        });
+            eventBus.on(GameEvents.BUILDING_PLACED, () => {
+                this.play('buildStart');
+            }),
 
-        eventBus.on(GameEvents.BUILDING_COMPLETED, () => {
-            this.play('buildComplete');
-        });
+            eventBus.on(GameEvents.BUILDING_COMPLETED, () => {
+                this.play('buildComplete');
+            }),
 
-        eventBus.on(GameEvents.UNIT_SPAWNED, () => {
-            this.play('unitReady');
-        });
+            eventBus.on(GameEvents.UNIT_SPAWNED, () => {
+                this.play('unitReady');
+            }),
 
-        eventBus.on(GameEvents.UNIT_COMMAND, (data) => {
-            if (data.command === 'move') {
-                this.play('moveCommand');
-            } else if (data.command === 'attack') {
-                this.play('attackCommand');
-            }
-        });
+            eventBus.on(GameEvents.UNIT_COMMAND, (data) => {
+                if (data.command === 'move') {
+                    this.play('moveCommand');
+                } else if (data.command === 'attack') {
+                    this.play('attackCommand');
+                }
+            }),
 
-        eventBus.on(GameEvents.UI_ALERT, (data) => {
-            if (data.type === 'danger') {
-                this.play('error');
-            }
-        });
+            eventBus.on(GameEvents.UI_ALERT, (data) => {
+                if (data.type === 'danger') {
+                    this.play('error');
+                }
+            })
+        ];
 
         // Resume audio context on user interaction
         document.addEventListener('click', () => {
@@ -546,6 +549,10 @@ export class SoundManager {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         if (this.musicTrack) {
             this.musicTrack.stop();
         }

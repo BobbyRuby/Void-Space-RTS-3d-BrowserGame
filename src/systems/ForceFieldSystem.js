@@ -22,18 +22,20 @@ export class ForceFieldSystem {
         this.segments = [];
         this.segmentIdCounter = 0;
 
-        // Listen for building events
-        eventBus.on(GameEvents.BUILDING_COMPLETED, (data) => {
-            if (data.building.type === 'forceFieldGenerator') {
-                this.registerGenerator(data.building);
-            }
-        });
+        // Listen for building events - store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.BUILDING_COMPLETED, (data) => {
+                if (data.building.type === 'forceFieldGenerator') {
+                    this.registerGenerator(data.building);
+                }
+            }),
 
-        eventBus.on(GameEvents.BUILDING_DESTROYED, (data) => {
-            if (data.building.type === 'forceFieldGenerator') {
-                this.unregisterGenerator(data.building);
-            }
-        });
+            eventBus.on(GameEvents.BUILDING_DESTROYED, (data) => {
+                if (data.building.type === 'forceFieldGenerator') {
+                    this.unregisterGenerator(data.building);
+                }
+            })
+        ];
     }
 
     /**
@@ -515,6 +517,10 @@ export class ForceFieldSystem {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         for (const segment of this.segments) {
             this.removeFieldSegment(segment);
         }

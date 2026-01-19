@@ -43,18 +43,20 @@ export class CombatSystem {
         // Initialize muzzle flash light pool
         this.initLightPool();
 
-        // Listen for combat events
-        eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => {
-            this.createProjectile(data);
-        });
+        // Listen for combat events - store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => {
+                this.createProjectile(data);
+            }),
 
-        eventBus.on(GameEvents.COMBAT_EXPLOSION, (data) => {
-            this.createExplosion(data.position, data.size, data.weaponType);
-        });
+            eventBus.on(GameEvents.COMBAT_EXPLOSION, (data) => {
+                this.createExplosion(data.position, data.size, data.weaponType);
+            }),
 
-        eventBus.on(GameEvents.COMBAT_PROJECTILE_HIT, (data) => {
-            this.createImpactEffect(data.position, data.weaponType);
-        });
+            eventBus.on(GameEvents.COMBAT_PROJECTILE_HIT, (data) => {
+                this.createImpactEffect(data.position, data.weaponType);
+            })
+        ];
     }
 
     /**
@@ -250,6 +252,11 @@ export class CombatSystem {
 
     createProjectile(data) {
         const { shooter, target, startPos, damage, splash = 0, hardpointWeapon, hardpointOffset } = data;
+
+        // Guard: skip if shooter is invalid (dead, disposed, or undefined)
+        if (!shooter || !shooter.mesh) {
+            return;
+        }
 
         // Guard: skip if target is invalid (dead, disposed, or undefined)
         if (!target || !target.mesh || !target.mesh.position) {
@@ -754,6 +761,10 @@ export class CombatSystem {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         for (const proj of this.projectiles) {
             proj.mesh.dispose();
             if (proj.trail && proj.trail.mesh) {

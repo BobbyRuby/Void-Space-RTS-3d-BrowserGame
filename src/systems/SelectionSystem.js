@@ -16,14 +16,16 @@ export class SelectionSystem {
     }
 
     init() {
-        // Set up event listeners
-        eventBus.on(GameEvents.INPUT_CLICK, (data) => {
-            this.handleClick(data);
-        });
+        // Set up event listeners - store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.INPUT_CLICK, (data) => {
+                this.handleClick(data);
+            }),
 
-        eventBus.on(GameEvents.INPUT_DRAG_END, (data) => {
-            this.handleBoxSelect(data);
-        });
+            eventBus.on(GameEvents.INPUT_DRAG_END, (data) => {
+                this.handleBoxSelect(data);
+            })
+        ];
     }
 
     // ===== Single Selection =====
@@ -297,6 +299,10 @@ export class SelectionSystem {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         this.controlGroups = {};
     }
 }

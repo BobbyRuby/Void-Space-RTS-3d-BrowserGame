@@ -43,6 +43,17 @@ class GameState {
         this.buildMode = null;
         this.buildPreview = null;
 
+        // Cache for team-based queries (invalidated on add/remove)
+        this._teamCacheValid = false;
+        this._entitiesByTeam = {};
+        this._unitsByTeam = {};
+        this._buildingsByTeam = {};
+        for (let t = 0; t <= 5; t++) {
+            this._entitiesByTeam[t] = [];
+            this._unitsByTeam[t] = [];
+            this._buildingsByTeam[t] = [];
+        }
+
         // Team resources (initialized per team)
         this.resources = {};
         this.stats = {};
@@ -93,6 +104,9 @@ class GameState {
             this.buildings.push(entity);
         }
 
+        // Invalidate team cache
+        this._teamCacheValid = false;
+
         // Add to spatial grid for efficient neighbor lookups
         if (this.spatialGrid) {
             this.spatialGrid.insert(entity);
@@ -116,6 +130,9 @@ class GameState {
         removeFrom(this.buildings);
         removeFrom(this.selectedEntities);
 
+        // Invalidate team cache
+        this._teamCacheValid = false;
+
         // Remove from spatial grid
         if (this.spatialGrid) {
             this.spatialGrid.remove(entity);
@@ -124,20 +141,69 @@ class GameState {
         eventBus.emit(GameEvents.ENTITY_DESTROYED, entity);
     }
 
+    /**
+     * Rebuild team-based caches (call when cache is invalid)
+     */
+    _rebuildTeamCache() {
+        // Clear existing caches
+        for (let t = 0; t <= 5; t++) {
+            this._entitiesByTeam[t] = [];
+            this._unitsByTeam[t] = [];
+            this._buildingsByTeam[t] = [];
+        }
+
+        // Rebuild entity cache
+        for (const e of this.entities) {
+            const t = e.team;
+            if (t >= 0 && t <= 5) {
+                this._entitiesByTeam[t].push(e);
+            }
+        }
+
+        // Rebuild unit cache
+        for (const u of this.units) {
+            const t = u.team;
+            if (t >= 0 && t <= 5) {
+                this._unitsByTeam[t].push(u);
+            }
+        }
+
+        // Rebuild building cache
+        for (const b of this.buildings) {
+            const t = b.team;
+            if (t >= 0 && t <= 5) {
+                this._buildingsByTeam[t].push(b);
+            }
+        }
+
+        this._teamCacheValid = true;
+    }
+
     getEntitiesByTeam(team) {
-        return this.entities.filter(e => e.team === team);
+        if (!this._teamCacheValid) {
+            this._rebuildTeamCache();
+        }
+        return this._entitiesByTeam[team] || [];
     }
 
     getUnitsByTeam(team) {
-        return this.units.filter(u => u.team === team);
+        if (!this._teamCacheValid) {
+            this._rebuildTeamCache();
+        }
+        return this._unitsByTeam[team] || [];
     }
 
     getBuildingsByTeam(team) {
-        return this.buildings.filter(b => b.team === team);
+        if (!this._teamCacheValid) {
+            this._rebuildTeamCache();
+        }
+        return this._buildingsByTeam[team] || [];
     }
 
     getBuildingsByType(team, type) {
-        return this.buildings.filter(b => b.team === team && b.type === type);
+        // Use cached buildings list then filter by type
+        const buildings = this.getBuildingsByTeam(team);
+        return buildings.filter(b => b.type === type);
     }
 
     // ===== Selection Management =====

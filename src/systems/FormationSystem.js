@@ -200,9 +200,12 @@ export class FormationSystem {
     }
 
     setupEventListeners() {
-        eventBus.on(GameEvents.ENTITY_DESTROYED, (entity) => {
-            this.removeUnitFromFormation(entity);
-        });
+        // Store unsubscribe functions for cleanup
+        this._unsubs = [
+            eventBus.on(GameEvents.ENTITY_DESTROYED, (entity) => {
+                this.removeUnitFromFormation(entity);
+            })
+        ];
     }
 
     // ===== Formation Management =====
@@ -466,6 +469,10 @@ export class FormationSystem {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         this.formations.clear();
         this.unitFormations.clear();
     }
