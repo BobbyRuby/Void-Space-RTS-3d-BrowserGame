@@ -413,9 +413,12 @@ export class BuildMenu {
                 this.showUnitInfo(unit, config, cost);
             });
 
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
                 if (canBuild && hasProduction && hasSupply) {
-                    this.queueUnit(unit.type);
+                    const count = e.shiftKey ? 5 : 1;
+                    for (let i = 0; i < count; i++) {
+                        this.queueUnit(unit.type);
+                    }
                 }
             });
 

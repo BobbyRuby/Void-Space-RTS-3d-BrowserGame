@@ -782,6 +782,7 @@ export class Building extends Entity {
         }
 
         gameState.spendCredits(this.team, cost);
+        gameState.modifyResource(this.team, 'supply', unitDef.supply || 1);
         this.buildQueue.push({ type: unitType });
 
         eventBus.emit(GameEvents.BUILDING_QUEUE_START, {
@@ -801,9 +802,10 @@ export class Building extends Entity {
         const unitDef = UNITS[item.type];
         if (!unitDef) return false;
 
-        // Refund cost
+        // Refund cost and supply
         const cost = typeof unitDef.cost === 'number' ? unitDef.cost : (unitDef.cost?.credits || 0);
         gameState.modifyResource(this.team, 'credits', cost);
+        gameState.modifyResource(this.team, 'supply', -(unitDef.supply || 1));
 
         // Remove from queue
         this.buildQueue.splice(index, 1);
@@ -814,7 +816,7 @@ export class Building extends Entity {
         }
 
         eventBus.emit(GameEvents.UI_ALERT, {
-            message: `${unitDef.name} cancelled (+${cost} credits)`,
+            message: `${unitDef.name} cancelled (+${cost} credits, -${unitDef.supply || 1} supply)`,
             type: 'info',
             team: this.team
         });

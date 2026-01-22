@@ -170,13 +170,12 @@ export class Game {
                 if (ore) unit.harvest(ore);
             }
 
-            // Update supply
-            const unitDef = UNITS[data.unitType];
-            gameState.modifyResource(data.team, 'supply', unitDef.supply);
+            // Supply is already reserved at queue time, just record stat
             gameState.recordUnitBuilt(data.team);
 
             // Alert for player
             if (data.team === TEAMS.PLAYER) {
+                const unitDef = UNITS[data.unitType];
                 this.showAlert(`${unitDef.name} ready!`, 'info');
             }
         });
@@ -449,15 +448,21 @@ export class Game {
 
         // Single pass through all buildings (fixes O(teams * buildings) -> O(buildings))
         for (const building of gameState.buildings) {
-            if (building.dead || building.isConstructing) continue;
+            if (building.dead) continue;
 
             const t = building.team;
             if (t < 0 || t > 5) continue;
 
             const def = building.def;
-            teamStats[t].maxEnergy += def.energyProduction || 0;
+
+            // Energy drain starts immediately when building is placed
             teamStats[t].energyDrain += def.energyDrain || 0;
-            teamStats[t].maxSupply += def.supplyProvided || 0;
+
+            // Production only counts when construction is complete
+            if (!building.isConstructing) {
+                teamStats[t].maxEnergy += def.energyProduction || 0;
+                teamStats[t].maxSupply += def.supplyProvided || 0;
+            }
         }
 
         // Apply stats to each team's resources
@@ -466,6 +471,7 @@ export class Game {
             const stats = teamStats[t];
             res.maxEnergy = stats.maxEnergy;
             res.energy = stats.maxEnergy - stats.energyDrain;
+            res.energyDrain = stats.energyDrain;
             res.maxSupply = stats.maxSupply;
         }
     }
@@ -627,7 +633,7 @@ export class Game {
         this.updateElement('creditsValue', Math.floor(res.credits));
         this.updateElement('oreValue', Math.floor(res.ore));
         this.updateElement('crystalsValue', Math.floor(res.crystals));
-        this.updateElement('energyValue', `${res.energy}/${res.maxEnergy}`);
+        this.updateElement('energyValue', `+${res.maxEnergy} -${res.energyDrain} = ${res.energy}`);
         this.updateElement('supplyValue', `${res.supply}/${res.maxSupply}`);
     }
 

@@ -67,6 +67,7 @@ class GameState {
                 crystals: 0,
                 energy: 0,
                 maxEnergy: 0,
+                energyDrain: 0,
                 supply: 0,
                 maxSupply: 0
             };
