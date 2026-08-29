@@ -392,7 +392,8 @@ export class BuildMenu {
             { type: 'frigate', icon: '⚓', name: 'Frigate', desc: 'Medium warship', hotkey: 'I' },
             { type: 'cruiser', icon: '🚢', name: 'Cruiser', desc: 'Heavy warship', hotkey: 'O' },
             { type: 'battlecruiser', icon: '⭐', name: 'Battlecruiser', desc: 'Capital ship', hotkey: 'P' },
-            { type: 'dreadnought', icon: '🔱', name: 'Dreadnought', desc: 'Capital ship - devastating firepower', hotkey: 'K' }
+            { type: 'dreadnought', icon: '🔱', name: 'Dreadnought', desc: 'Capital ship - devastating firepower', hotkey: 'K' },
+            { type: 'phantom', icon: '👁', name: 'Phantom', desc: 'Cloaked strike fighter - only enemy radar can see it', hotkey: 'H' }
         ];
 
         for (const unit of units) {
