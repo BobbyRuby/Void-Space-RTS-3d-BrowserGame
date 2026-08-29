@@ -210,6 +210,10 @@ class GameState {
     // ===== Selection Management =====
 
     select(entity) {
+        // Defensive: a null/undefined entity would push into selectedEntities then throw
+        // on entity.selected, poisoning the array so clearSelection's forEach also throws.
+        // No live caller passes null (all guard first); this hardens the entry point.
+        if (!entity) return;
         if (!this.selectedEntities.includes(entity)) {
             this.selectedEntities.push(entity);
             entity.selected = true;
