@@ -31,6 +31,8 @@ class GraphicsManagerClass {
 
         // Current settings
         this.currentLevel = 'MEDIUM';
+
+        this.unitTrails = new Map(); // entity -> TrailMesh, for engine-trail cleanup
     }
 
     /**
@@ -52,6 +54,10 @@ class GraphicsManagerClass {
 
         // Hull hit-flash: flash any entity's mesh briefly when it takes damage
         eventBus.on(GameEvents.ENTITY_DAMAGED, (data) => this.flashEntity(data.entity));
+
+        // Engine trails: attach a TrailMesh to each new unit (quality-gated), dispose on death
+        eventBus.on(GameEvents.ENTITY_CREATED, (entity) => this.attachTrail(entity));
+        eventBus.on(GameEvents.ENTITY_DESTROYED, (data) => this.detachTrail((data && data.entity) ? data.entity : data));
 
         console.log(`GraphicsManager: Initialized with ${graphicsLevel} quality`);
     }
@@ -258,6 +264,47 @@ class GraphicsManagerClass {
             }
         };
         setTimeout(tick, 40);
+    }
+
+    /**
+     * Attach a fading engine TrailMesh behind a unit. Quality-gated to HIGH/ULTRA
+     * to bound per-frame trail cost. Buildings are not trailed.
+     */
+    attachTrail(entity) {
+        if (!entity || !entity.isUnit || !entity.mesh) return;
+        // Quality gate: trails only on HIGH / ULTRA
+        if (this.currentLevel !== 'HIGH' && this.currentLevel !== 'ULTRA') return;
+        if (this.unitTrails.has(entity)) return;
+        if (typeof BABYLON.TrailMesh !== 'function') return;
+
+        const size = entity.size || 1;
+        const trail = new BABYLON.TrailMesh('trail_' + entity.id, entity.mesh, this.scene, Math.max(0.3, size * 0.35), 30, true);
+
+        const tc = entity.teamColor || new BABYLON.Color3(0.5, 0.7, 1);
+        const mat = new BABYLON.StandardMaterial('trailMat_' + entity.id, this.scene);
+        mat.emissiveColor = new BABYLON.Color3(tc.r, tc.g, tc.b);
+        mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        mat.specularColor = new BABYLON.Color3(0, 0, 0);
+        mat.alpha = 0.5;
+        mat.disableLighting = true;
+        mat.alphaMode = BABYLON.Engine.ALPHA_ADD; // additive glow
+        mat.backFaceCulling = false;
+        trail.material = mat;
+
+        this.unitTrails.set(entity, trail);
+    }
+
+    /**
+     * Dispose a unit's trail on death. Idempotent (safe if called twice, since
+     * ENTITY_DESTROYED is emitted from two sites).
+     */
+    detachTrail(entity) {
+        if (!entity) return;
+        const trail = this.unitTrails.get(entity);
+        if (!trail) return;
+        this.unitTrails.delete(entity);
+        if (trail.material) trail.material.dispose();
+        trail.dispose();
     }
 
     /**
