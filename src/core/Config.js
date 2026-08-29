@@ -242,6 +242,21 @@ export const BUILDINGS = {
         buildTime: 20,
         color: [0.8, 0.8, 0.2]
     },
+    reactor: {
+        // S2 Reactor tier (VOTE-016): higher-output power building. Picked up
+        // generically by Game.updateResourceCapacity via def.energyProduction;
+        // renders on the generic placeholder mesh (Building.js default case).
+        // Balance numbers are placeholders (CEO tunes).
+        name: 'Fusion Reactor',
+        icon: '☢️',
+        size: 10,
+        maxHealth: 1200,
+        cost: 500,
+        energyProduction: 100,
+        energyDrain: 0,
+        buildTime: 45,
+        color: [0.3, 0.8, 0.7]
+    },
     refinery: {
         name: 'Refinery',
         icon: '🏭',
