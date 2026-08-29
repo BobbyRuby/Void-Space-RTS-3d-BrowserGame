@@ -70,6 +70,10 @@ class GraphicsManagerClass {
         // Muzzle flash: pop a brief additive glow sprite at the shooter on fire
         eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => this.muzzleFlash(data));
 
+        // Death FX burst: buildings do not self-explode on death (units already do
+        // in Unit.die). Give a bigger burst on building death via the existing pathway.
+        eventBus.on(GameEvents.BUILDING_DESTROYED, (data) => this.buildingDeathBurst(data && data.building));
+
         console.log(`GraphicsManager: Initialized with ${graphicsLevel} quality`);
     }
 
@@ -372,6 +376,23 @@ class GraphicsManagerClass {
             }
         };
         setTimeout(fade, 16);
+    }
+
+    /**
+     * Spawn a scaled explosion burst when a building is destroyed. Reuses the
+     * existing pooled explosion ParticleSystem (and death sound) via the
+     * COMBAT_EXPLOSION event handled in CombatSystem.createExplosion, so nothing
+     * new is allocated here. Fired from BUILDING_DESTROYED, which Building.die
+     * emits BEFORE dispose, so the mesh position is still valid. Buildings are
+     * larger than units, so the burst is scaled up for a satisfying blow-up.
+     */
+    buildingDeathBurst(building) {
+        if (!building || !building.mesh) return;
+        eventBus.emit(GameEvents.COMBAT_EXPLOSION, {
+            position: building.mesh.position.clone(),
+            size: (building.size || 4) * 1.8,
+            weaponType: 'default'
+        });
     }
 
     /**
