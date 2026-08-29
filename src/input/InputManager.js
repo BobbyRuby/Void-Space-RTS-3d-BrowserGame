@@ -21,8 +21,13 @@ export class InputManager {
         this.dragStart = null;
         this.dragEnd = null;
         this.wasBoxSelect = false;
-        this.mouseX = 0;
-        this.mouseY = 0;
+        // -1 = pointer position not yet known (blocks edge-scroll until first move)
+        this.mouseX = -1;
+        this.mouseY = -1;
+
+        // Middle-button drag-pan state
+        this.isMiddlePanning = false;
+        this.middlePanLast = null;
 
         // Selection box element
         this.selectionBox = null;
@@ -531,6 +536,13 @@ export class InputManager {
             return;
         }
 
+        if (e.button === 1) { // Middle button - drag pan
+            e.preventDefault(); // suppress browser middle-click autoscroll
+            this.isMiddlePanning = true;
+            this.middlePanLast = { x: e.clientX, y: e.clientY };
+            return;
+        }
+
         if (e.button === 0) { // Left button
             // Don't start drag if in build mode (placing buildings)
             if (gameState.buildMode) {
@@ -549,6 +561,12 @@ export class InputManager {
     }
 
     onMouseUp(e) {
+        if (e.button === 1 && this.isMiddlePanning) {
+            this.isMiddlePanning = false;
+            this.middlePanLast = null;
+            return;
+        }
+
         if (e.button === 0 && this.isDragging) {
             this.isDragging = false;
             this.dragEnd = { x: e.clientX, y: e.clientY };
@@ -586,6 +604,20 @@ export class InputManager {
     onMouseMove(e) {
         this.mouseX = e.clientX;
         this.mouseY = e.clientY;
+
+        // Middle-button drag-pan: move the view with the cursor (grab-pan)
+        if (this.isMiddlePanning && this.middlePanLast) {
+            const dx = e.clientX - this.middlePanLast.x;
+            const dy = e.clientY - this.middlePanLast.y;
+            const cam = sceneManager.camera;
+            // World units per screen pixel scales with zoom (camera radius)
+            const worldPerPx = (cam ? cam.radius : 200) / 300;
+            // Drag right -> view follows right -> camera target moves left (negate).
+            // Drag down (screen +y) -> view follows down -> target moves screen-up (forward+).
+            sceneManager.panCameraRelative(dy * worldPerPx, -dx * worldPerPx);
+            this.middlePanLast = { x: e.clientX, y: e.clientY };
+            return;
+        }
 
         if (this.isDragging && this.dragStart) {
             this.dragEnd = { x: e.clientX, y: e.clientY };
@@ -756,8 +788,36 @@ export class InputManager {
         }
     }
 
+    // ===== Mouse Edge Scrolling =====
+
+    updatePointerEdgeScroll(dt) {
+        // Skip while box-selecting, middle-panning, or placing a building
+        if (this.isDragging || this.isMiddlePanning || gameState.buildMode) return;
+        // Skip until a real pointer position is known (constructor seeds -1)
+        if (this.mouseX < 0 || this.mouseY < 0) return;
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const m = this.edgeScrollMargin;
+        const amt = this.edgeScrollSpeed * dt;
+
+        let forward = 0;
+        let right = 0;
+
+        if (this.mouseY <= m) forward += amt;            // top edge -> screen up
+        else if (this.mouseY >= h - m) forward -= amt;   // bottom edge -> screen down
+
+        if (this.mouseX <= m) right -= amt;              // left edge
+        else if (this.mouseX >= w - m) right += amt;     // right edge
+
+        if (forward !== 0 || right !== 0) {
+            sceneManager.panCameraRelative(forward, right);
+        }
+    }
+
     update(dt) {
         this.updateEdgeScroll(dt);
+        this.updatePointerEdgeScroll(dt);
     }
 
     isKeyDown(code) {
