@@ -6,6 +6,11 @@
 import { GRAPHICS_SETTINGS, graphicsLevel, setGraphicsLevel } from '../core/Config.js?v=20260119';
 import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 
+// Hull hit-flash tint (warm white), reused across all flashes to avoid per-hit allocation
+const HIT_FLASH_COLOR = new BABYLON.Color3(1, 0.85, 0.8);
+const HIT_FLASH_MS = 110;      // how long a flash lasts
+const HIT_FLASH_ALPHA = 0.45;  // overlay strength
+
 /**
  * GraphicsManager - Manages post-processing and visual quality settings
  * Supports bloom, FXAA, SSAO, shadows, and motion blur
@@ -44,6 +49,9 @@ class GraphicsManagerClass {
         // Apply initial settings
         this.applySettings(graphicsLevel);
         this.initialized = true;
+
+        // Hull hit-flash: flash any entity's mesh briefly when it takes damage
+        eventBus.on(GameEvents.ENTITY_DAMAGED, (data) => this.flashEntity(data.entity));
 
         console.log(`GraphicsManager: Initialized with ${graphicsLevel} quality`);
     }
@@ -208,6 +216,48 @@ class GraphicsManagerClass {
         if (this.shadowGenerator && mesh) {
             this.shadowGenerator.addShadowCaster(mesh, true);
         }
+    }
+
+    /**
+     * Briefly flash an entity's meshes when it takes damage (hull hit-flash).
+     * Uses per-mesh renderOverlay so shared MaterialPool materials are untouched.
+     * Debounced per entity: repeated hits extend the flash instead of stacking timers.
+     */
+    flashEntity(entity) {
+        if (!entity || !entity.mesh || typeof entity.mesh.getChildMeshes !== 'function') return;
+
+        // Extend the flash deadline on every hit
+        entity._hitFlashUntil = performance.now() + HIT_FLASH_MS;
+
+        // Already flashing -> the running timer chain will honor the extended deadline
+        if (entity._hitFlashing) return;
+        entity._hitFlashing = true;
+
+        const setOverlay = (on) => {
+            if (!entity.mesh || typeof entity.mesh.getChildMeshes !== 'function') return;
+            const meshes = entity.mesh.getChildMeshes(false);
+            for (const m of meshes) {
+                m.renderOverlay = on;
+                if (on) {
+                    m.overlayColor = HIT_FLASH_COLOR;
+                    m.overlayAlpha = HIT_FLASH_ALPHA;
+                }
+            }
+        };
+
+        setOverlay(true);
+
+        const tick = () => {
+            // Entity disposed mid-flash -> stop cleanly
+            if (!entity.mesh) { entity._hitFlashing = false; return; }
+            if (performance.now() >= entity._hitFlashUntil) {
+                setOverlay(false);
+                entity._hitFlashing = false;
+            } else {
+                setTimeout(tick, 40);
+            }
+        };
+        setTimeout(tick, 40);
     }
 
     /**
