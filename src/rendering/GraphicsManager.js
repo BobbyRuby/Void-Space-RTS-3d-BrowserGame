@@ -11,6 +11,10 @@ const HIT_FLASH_COLOR = new BABYLON.Color3(1, 0.85, 0.8);
 const HIT_FLASH_MS = 110;      // how long a flash lasts
 const HIT_FLASH_ALPHA = 0.45;  // overlay strength
 
+const MUZZLE_POOL_SIZE = 12;   // reused round-robin, bounds cost, no per-shot alloc
+const MUZZLE_MS = 70;          // flash lifetime
+const MUZZLE_COLOR = new BABYLON.Color3(1, 0.82, 0.45); // warm muzzle glow
+
 /**
  * GraphicsManager - Manages post-processing and visual quality settings
  * Supports bloom, FXAA, SSAO, shadows, and motion blur
@@ -33,6 +37,10 @@ class GraphicsManagerClass {
         this.currentLevel = 'MEDIUM';
 
         this.unitTrails = new Map(); // entity -> TrailMesh, for engine-trail cleanup
+
+        this.muzzlePool = [];        // reusable additive muzzle-flash planes
+        this.muzzlePoolCursor = 0;
+        this.muzzleMat = null;       // shared additive material for all muzzle flashes
     }
 
     /**
@@ -58,6 +66,9 @@ class GraphicsManagerClass {
         // Engine trails: attach a TrailMesh to each new unit (quality-gated), dispose on death
         eventBus.on(GameEvents.ENTITY_CREATED, (entity) => this.attachTrail(entity));
         eventBus.on(GameEvents.ENTITY_DESTROYED, (data) => this.detachTrail((data && data.entity) ? data.entity : data));
+
+        // Muzzle flash: pop a brief additive glow sprite at the shooter on fire
+        eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => this.muzzleFlash(data));
 
         console.log(`GraphicsManager: Initialized with ${graphicsLevel} quality`);
     }
@@ -308,6 +319,62 @@ class GraphicsManagerClass {
     }
 
     /**
+     * Pop a brief additive muzzle-flash sprite at the shooter. Pooled billboard
+     * planes reused round-robin (no per-shot allocation, no dynamic light).
+     */
+    muzzleFlash(data) {
+        if (!data || !data.shooter || !data.shooter.mesh || !this.scene) return;
+
+        // Lazy-build the shared additive material + plane pool
+        if (!this.muzzleMat) {
+            const mat = new BABYLON.StandardMaterial('muzzleFlashMat', this.scene);
+            mat.emissiveColor = MUZZLE_COLOR;
+            mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+            mat.specularColor = new BABYLON.Color3(0, 0, 0);
+            mat.disableLighting = true;
+            mat.alphaMode = BABYLON.Engine.ALPHA_ADD;
+            mat.backFaceCulling = false;
+            this.muzzleMat = mat;
+        }
+        if (this.muzzlePool.length === 0) {
+            for (let i = 0; i < MUZZLE_POOL_SIZE; i++) {
+                const p = BABYLON.MeshBuilder.CreatePlane('muzzle_' + i, { size: 1 }, this.scene);
+                p.material = this.muzzleMat;
+                p.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+                p.isPickable = false;
+                p.setEnabled(false);
+                this.muzzlePool.push(p);
+            }
+        }
+
+        const plane = this.muzzlePool[this.muzzlePoolCursor];
+        this.muzzlePoolCursor = (this.muzzlePoolCursor + 1) % this.muzzlePool.length;
+
+        const pos = data.shooter.mesh.position;
+        const scale = 1 + (data.shooter.size || 1) * 0.4;
+        plane.position.set(pos.x, pos.y, pos.z);
+        plane.scaling.set(scale, scale, scale);
+        plane.rotation.z = Math.random() * Math.PI; // slight variety
+        plane.visibility = 1;
+        plane.setEnabled(true);
+
+        const start = performance.now();
+        const fade = () => {
+            // Scene/plane may be disposed between frames
+            if (!this.scene || plane.isDisposed()) return;
+            const t = (performance.now() - start) / MUZZLE_MS;
+            if (t >= 1) {
+                plane.visibility = 0;
+                plane.setEnabled(false);
+            } else {
+                plane.visibility = 1 - t; // fade out over the flash lifetime
+                setTimeout(fade, 16);
+            }
+        };
+        setTimeout(fade, 16);
+    }
+
+    /**
      * Enable shadow receiving on a mesh
      */
     enableShadowReceiver(mesh) {
@@ -387,6 +454,11 @@ class GraphicsManagerClass {
      */
     dispose() {
         this.disposeEffects();
+
+        for (const p of this.muzzlePool) { if (p && !p.isDisposed()) p.dispose(); }
+        this.muzzlePool = [];
+        if (this.muzzleMat) { this.muzzleMat.dispose(); this.muzzleMat = null; }
+
         this.initialized = false;
         console.log('GraphicsManager: Disposed');
     }
