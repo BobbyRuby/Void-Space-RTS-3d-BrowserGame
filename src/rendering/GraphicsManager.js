@@ -41,6 +41,8 @@ class GraphicsManagerClass {
         this.muzzlePool = [];        // reusable additive muzzle-flash planes
         this.muzzlePoolCursor = 0;
         this.muzzleMat = null;       // shared additive material for all muzzle flashes
+
+        this.energyGlow = null; // selective GlowLayer for weapon/force-field energy
     }
 
     /**
@@ -73,6 +75,8 @@ class GraphicsManagerClass {
         // Death FX burst: buildings do not self-explode on death (units already do
         // in Unit.die). Give a bigger burst on building death via the existing pathway.
         eventBus.on(GameEvents.BUILDING_DESTROYED, (data) => this.buildingDeathBurst(data && data.building));
+
+        this.setupEnergyGlow();
 
         console.log(`GraphicsManager: Initialized with ${graphicsLevel} quality`);
     }
@@ -228,6 +232,37 @@ class GraphicsManagerClass {
 
         // Enable shadows on the scene
         this.scene.shadowsEnabled = true;
+    }
+
+    /**
+     * Selective energy GlowLayer: glows ONLY weapon projectiles and force-field
+     * beams, using each mesh's own emissive color, so ships/stars/other emissive
+     * meshes are not washed out. Runs at every quality tier (the DefaultRendering
+     * Pipeline bloom only runs at HIGH/ULTRA, so this gives energy glow at LOW/MED).
+     * It is a separate effect layer, coexisting with that bloom pipeline and the
+     * ResourceSystem HighlightLayer. Guarded so a creation failure never breaks the
+     * scene.
+     */
+    setupEnergyGlow() {
+        if (!this.scene || typeof BABYLON.GlowLayer !== 'function') return;
+        if (this.energyGlow) return;
+        try {
+            const gl = new BABYLON.GlowLayer('energyGlow', this.scene, { blurKernelSize: 16 });
+            gl.intensity = 0.7;
+            gl.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
+                const n = (mesh && mesh.name) || '';
+                if ((n === 'projectile' || n.indexOf('forceField') === 0) && material && material.emissiveColor) {
+                    const e = material.emissiveColor;
+                    result.set(e.r, e.g, e.b, 1);
+                } else {
+                    result.set(0, 0, 0, 0);
+                }
+            };
+            this.energyGlow = gl;
+        } catch (e) {
+            console.warn('GraphicsManager: energy GlowLayer disabled -', e && e.message);
+            this.energyGlow = null;
+        }
     }
 
     /**
@@ -479,6 +514,8 @@ class GraphicsManagerClass {
         for (const p of this.muzzlePool) { if (p && !p.isDisposed()) p.dispose(); }
         this.muzzlePool = [];
         if (this.muzzleMat) { this.muzzleMat.dispose(); this.muzzleMat = null; }
+
+        if (this.energyGlow) { this.energyGlow.dispose(); this.energyGlow = null; }
 
         this.initialized = false;
         console.log('GraphicsManager: Disposed');
