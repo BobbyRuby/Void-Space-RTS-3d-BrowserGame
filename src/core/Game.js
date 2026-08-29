@@ -263,6 +263,61 @@ export class Game {
             }
         });
 
+        // Handle full state reset before a load (dispose every current entity/mesh)
+        eventBus.on(GameEvents.GAME_RESET, () => {
+            for (const entity of [...gameState.entities]) {
+                if (typeof entity.dispose === 'function') entity.dispose();
+            }
+            gameState.reset();
+        });
+
+        // Handle restoring a single entity from save data
+        eventBus.on(GameEvents.RESTORE_ENTITY, (data) => {
+            const x = data.position ? data.position.x : 0;
+            const z = data.position ? data.position.z : 0;
+            let entity;
+
+            if (data.isBuilding) {
+                // Construct directly - do NOT use createBuilding(), it re-validates
+                // placement and spends credits, which would double-charge on restore.
+                entity = new Building(x, z, data.team, data.type, scene);
+                gameState.addEntity(entity);
+                entity.isConstructing = data.isConstructing;
+                entity.constructionProgress = data.constructionProgress ?? 1;
+                entity.buildQueue = (data.buildQueue || []).map(i => ({ type: i.type }));
+                entity.buildProgress = data.buildProgress || 0;
+            } else {
+                // Alien units are a separate class/def table - rebuild via createAlienUnit
+                entity = data.alienType
+                    ? this.createAlienUnit(x, z, data.team, data.alienType, scene)
+                    : this.createUnit(x, z, data.team, data.type, scene);
+                entity.command = data.command;
+                if (data.targetX !== undefined) entity.targetX = data.targetX;
+                if (data.targetZ !== undefined) entity.targetZ = data.targetZ;
+                if (data.type === 'harvester') {
+                    entity.cargo = data.cargo || 0;
+                    entity.cargoType = data.cargoType;
+                }
+            }
+
+            // Restore common state + exact transform
+            if (entity) {
+                entity.health = data.health;
+                entity.maxHealth = data.maxHealth;
+                if (entity.mesh && data.position) {
+                    entity.mesh.position.x = data.position.x;
+                    entity.mesh.position.y = data.position.y;
+                    entity.mesh.position.z = data.position.z;
+                }
+                if (entity.mesh && data.rotation !== undefined) {
+                    entity.mesh.rotation.y = data.rotation;
+                }
+            }
+        });
+
+        // Handle fog-of-war restore (no-op: serializeExplored() saves no data today)
+        eventBus.on(GameEvents.RESTORE_FOG, () => {});
+
         // Handle auto-defense: nearby units engage attackers when buildings take damage
         eventBus.on(GameEvents.ENTITY_DAMAGED, (data) => {
             const { entity, attacker } = data;
@@ -583,6 +638,9 @@ export class Game {
         for (const entity of gameState.entities) {
             entity.update(dt);
         }
+
+        // Re-bucket moved units in the spatial grid before combat/flocking queries read it
+        gameState.updateSpatialGrid();
 
         // Update core systems
         combatSystem.update(dt);

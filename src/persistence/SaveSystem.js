@@ -6,6 +6,7 @@
 import { CONFIG, TEAMS } from '../core/Config.js?v=20260119';
 import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 import { gameState } from '../core/GameState.js?v=20260119';
+import { getSeededRandom, resetSeededRandom } from '../core/SeededRandom.js?v=20260119';
 
 // Save format version for migration support
 const SAVE_VERSION = 1;
@@ -173,6 +174,9 @@ export class SaveSystem {
             oreNodes: this.serializeResourceNodes(gameState.oreNodes),
             crystalNodes: this.serializeResourceNodes(gameState.crystalNodes),
 
+            // Seeded RNG cursor (so reload continues the same random sequence)
+            rng: { seed: getSeededRandom().getSeed(), state: getSeededRandom().getState() },
+
             // Fog of war explored state
             explored: this.serializeExplored(),
 
@@ -236,16 +240,19 @@ export class SaveSystem {
             if (entity.isBuilding) {
                 serialized.isConstructing = entity.isConstructing;
                 serialized.constructionProgress = entity.constructionProgress;
-                serialized.productionQueue = entity.productionQueue?.map(item => ({
-                    type: item.type,
-                    timeRemaining: item.timeRemaining
-                })) || [];
+                serialized.buildQueue = entity.buildQueue?.map(item => ({ type: item.type })) || [];
+                serialized.buildProgress = entity.buildProgress || 0;
             }
 
             // Unit-specific
             if (!entity.isBuilding) {
                 serialized.command = entity.command;
-                serialized.targetPosition = entity.targetPosition;
+                serialized.targetX = entity.targetX;
+                serialized.targetZ = entity.targetZ;
+
+                // Alien units use a different def table + class; record so restore
+                // rebuilds them via createAlienUnit, not createUnit (UNITS has no alien key)
+                if (entity.alienType) serialized.alienType = entity.alienType;
 
                 // Harvester cargo
                 if (entity.type === 'harvester') {
@@ -317,15 +324,21 @@ export class SaveSystem {
         gameState.gameSpeed = saveData.gameSpeed;
         gameState.playTime = saveData.playTime;
 
-        // Restore resources
+        // Restore resources (gameState.resources is a plain object keyed by team, not a Map)
         for (const [teamStr, res] of Object.entries(saveData.resources)) {
             const team = parseInt(teamStr);
-            gameState.resources.set(team, { ...res });
+            gameState.resources[team] = { ...res };
         }
 
         // Restore resource nodes
         await this.restoreResourceNodes(saveData.oreNodes, 'ore');
         await this.restoreResourceNodes(saveData.crystalNodes, 'crystal');
+
+        // Restore seeded RNG cursor (guard for saves made before this field existed)
+        if (saveData.rng) {
+            resetSeededRandom(saveData.rng.seed);
+            getSeededRandom().setState(saveData.rng.state);
+        }
 
         // Restore entities
         for (const entityData of saveData.entities) {
