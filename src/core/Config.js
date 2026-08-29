@@ -103,9 +103,10 @@ export function applyGameConfig(lobbyConfig) {
         CONFIG.GAME_SPEED = lobbyConfig.gameSpeed;
     }
 
-    // Sandbox mode. Set unconditionally so a normal game started after a sandbox
-    // game clears the flag (pair with numAIPlayers:0 for a no-enemies sandbox).
-    CONFIG.SANDBOX = !!lobbyConfig.sandbox;
+    // Sandbox mode. Enabled by mode:'sandbox' (the lobby selector) OR a bare
+    // sandbox flag (back-compat). Set unconditionally so a normal game started
+    // after a sandbox game clears the flag (pair with numAIPlayers:0 for no enemies).
+    CONFIG.SANDBOX = lobbyConfig.mode === GAME_MODES.SANDBOX || !!lobbyConfig.sandbox;
 
     console.log('Game config applied:', CONFIG);
 }
@@ -216,6 +217,15 @@ export const TEAM_NAMES = [
     'Ancient Ones',
     'The Watchers'
 ];
+
+// Game modes (locked contract with the lobby / voidspace-4). The lobby selector
+// sets lobbyConfig.mode to one of these ids; the sim branches on it. Single
+// source of truth so the UI and sim never drift on the string values.
+export const GAME_MODES = {
+    SKIRMISH: 'skirmish',
+    SURVIVAL: 'survival',
+    SANDBOX: 'sandbox'
+};
 
 export const BUILDINGS = {
     commandCenter: {
