@@ -31,12 +31,18 @@ export class AlienUnit extends Unit {
 
     createMesh(scene) {
         const color = TEAM_COLORS[this.team];
-        const parent = new BABYLON.TransformNode('alien_' + this.alienType + '_' + this.id, scene);
+        // this.alienType is assigned only after super() returns, but the base Unit
+        // constructor calls createMesh() during super() - so it is undefined here.
+        // Derive the type from this.type (the 'alien_<type>' key), which the base
+        // constructor sets before it calls createMesh. Without this, neither branch
+        // matches and the parent stays an empty node = invisible alien.
+        const alienType = this.alienType || (this.type || '').replace('alien_', '');
+        const parent = new BABYLON.TransformNode('alien_' + alienType + '_' + this.id, scene);
 
         // Alien ships have unique organic-looking designs
-        if (this.alienType === 'guardian') {
+        if (alienType === 'guardian') {
             this.createGuardianMesh(color, parent, scene);
-        } else if (this.alienType === 'sentinel') {
+        } else if (alienType === 'sentinel') {
             this.createSentinelMesh(color, parent, scene);
         }
 
