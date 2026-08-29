@@ -108,6 +108,9 @@ export function applyGameConfig(lobbyConfig) {
     // after a sandbox game clears the flag (pair with numAIPlayers:0 for no enemies).
     CONFIG.SANDBOX = lobbyConfig.mode === GAME_MODES.SANDBOX || !!lobbyConfig.sandbox;
 
+    // Selected game mode (skirmish default). Survival branches the sim in Game.init.
+    CONFIG.MODE = lobbyConfig.mode || GAME_MODES.SKIRMISH;
+
     console.log('Game config applied:', CONFIG);
 }
 

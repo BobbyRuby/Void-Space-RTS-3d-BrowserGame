@@ -3,7 +3,7 @@
 // Orchestrates all game modules and manages game lifecycle
 // ============================================================
 
-import { CONFIG, TEAMS, BUILDINGS, UNITS, TEAM_NAMES, applyGameConfig } from './Config.js?v=20260119';
+import { CONFIG, TEAMS, BUILDINGS, UNITS, TEAM_NAMES, GAME_MODES, applyGameConfig } from './Config.js?v=20260119';
 import { eventBus, GameEvents } from './EventBus.js?v=20260119';
 import { gameState } from './GameState.js?v=20260119';
 import { resetSeededRandom, getSeededRandom } from './SeededRandom.js?v=20260119';
@@ -114,10 +114,20 @@ export class Game {
         resourceSystem.generateOreFields();
         resourceSystem.generateCrystalFields();
 
+        // Keep a scene handle for runtime spawning (survival waves)
+        this.scene = scene;
+
         // Spawn bases
         this.updateLoadingProgress(90, 'Spawning bases...');
         this.spawnPlayerBases(scene);
-        this.spawnNeutralAliens(scene);
+
+        // Survival mode runs a wave director instead of ambient alien bases;
+        // the waves ARE the enemy. Other modes keep the ambient neutral aliens.
+        if (CONFIG.MODE === GAME_MODES.SURVIVAL) {
+            this.initSurvival();
+        } else {
+            this.spawnNeutralAliens(scene);
+        }
 
         // Setup event handlers
         this.setupEventHandlers(scene);
@@ -676,6 +686,9 @@ export class Game {
 
         // Clean up dead entities
         this.cleanupDeadEntities();
+
+        // Survival wave director (no-op unless survival mode is active)
+        this.updateSurvival(dt);
     }
 
     cleanupDeadEntities() {
@@ -733,6 +746,13 @@ export class Game {
             return;
         }
 
+        // Survival is ENDLESS: there are no AI-player factions to eliminate, so the
+        // win-by-elimination check below would fire instant victory on frame 1. Skip
+        // it in survival; only the lose-path (0 player buildings, above) applies.
+        if (gameState.survival && gameState.survival.active) {
+            return;
+        }
+
         // Check if all enemies are defeated. Enemy factions are the AI player teams
         // (TEAMS.PLAYER+1 .. below TEAMS.NEUTRAL); teams TEAMS.NEUTRAL+ are neutral aliens
         // and are NOT counted for victory by design - even if provoke() has flipped their
@@ -775,6 +795,86 @@ export class Game {
         this.updateElement('finalBuilt', stats.unitsBuilt);
         this.updateElement('finalLost', stats.unitsLost);
         this.updateElement('finalKills', stats.enemyKilled);
+    }
+
+    // ===== Survival Mode (wave director) =====
+
+    initSurvival() {
+        // HUD-facing state (contract locked with voidspace-4). Balance = placeholders.
+        gameState.survival = {
+            active: true,
+            waveNumber: 0,       // 1-based once waves start
+            nextWaveIn: 20,      // seconds until wave 1 (grace), then between waves
+            waveActive: false,
+            enemiesRemaining: 0,
+            wavesCleared: 0      // completed waves = the score
+        };
+        this.waveUnits = [];
+        // The wave faction (a neutral team, excluded from the elimination win-check)
+        // is hostile to the player for the whole match.
+        gameState.setHostility(TEAMS.PLAYER, TEAMS.NEUTRAL, true);
+    }
+
+    updateSurvival(dt) {
+        const s = gameState.survival;
+        if (!s || !s.active) return;
+
+        // Prune dead/removed wave units; expose the live count to the HUD.
+        this.waveUnits = this.waveUnits.filter(u => u && !u.dead);
+        s.enemiesRemaining = this.waveUnits.length;
+
+        if (s.waveActive) {
+            // A wave clears when every spawned enemy is dead.
+            if (this.waveUnits.length === 0) {
+                s.waveActive = false;
+                s.wavesCleared++;
+                s.nextWaveIn = 25;   // seconds to next wave (placeholder)
+            }
+        } else {
+            s.nextWaveIn -= dt;
+            if (s.nextWaveIn <= 0) {
+                s.waveNumber++;
+                this.spawnWave(s.waveNumber);
+                s.waveActive = true;
+                s.nextWaveIn = 0;
+            }
+        }
+    }
+
+    spawnWave(n) {
+        const scene = this.scene;
+        if (!scene) return;
+
+        // Escalate: more enemies each wave (placeholders, CEO tunes).
+        const count = 4 + Math.floor(n * 2);
+
+        // March target = the player's command center (fallback: any player building).
+        const base =
+            gameState.buildings.find(b => !b.dead && b.team === TEAMS.PLAYER && b.type === 'commandCenter') ||
+            gameState.buildings.find(b => !b.dead && b.team === TEAMS.PLAYER);
+        const bx = base && base.mesh ? base.mesh.position.x : 0;
+        const bz = base && base.mesh ? base.mesh.position.z : 0;
+
+        const edge = (CONFIG.MAP_SIZE || 1200) * 0.45;
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const ex = Math.cos(angle) * edge;
+            const ez = Math.sin(angle) * edge;
+            const type = (i % 4 === 0) ? 'sentinel' : 'guardian';
+
+            const alien = this.createAlienUnit(ex, ez, TEAMS.NEUTRAL, type, scene);
+            if (!alien) continue;
+            // Home = player base so the guardian AI marches in and engages there
+            // rather than patrolling its spawn point. Wide returnRange so it does not
+            // reset mid-chase; larger aggro so it engages defenders on arrival.
+            alien.homeX = bx;
+            alien.homeZ = bz;
+            alien.returnRange = CONFIG.MAP_SIZE || 1200;
+            alien.aggroRange = 160;
+            this.waveUnits.push(alien);
+        }
+
+        this.showAlert(`Wave ${n} incoming (${count})`, 'warning');
     }
 
     // ===== Cleanup =====

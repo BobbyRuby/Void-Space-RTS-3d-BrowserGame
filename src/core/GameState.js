@@ -43,6 +43,11 @@ class GameState {
         this.buildMode = null;
         this.buildPreview = null;
 
+        // Survival-mode wave state (set by Game.initSurvival only in survival mode).
+        // Cleared here so a prior survival game never leaks its active flag into a
+        // later skirmish (which would suppress the elimination win-check).
+        this.survival = null;
+
         // Cache for team-based queries (invalidated on add/remove)
         this._teamCacheValid = false;
         this._entitiesByTeam = {};
