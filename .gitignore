@@ -24,3 +24,6 @@ nul
 # Build artifacts (if any)
 dist/
 build/
+
+# Stray rubix memory-db copy - not game data (removed 2026-08-29)
+data/
