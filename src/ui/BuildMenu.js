@@ -332,6 +332,7 @@ export class BuildMenu {
 
         const buildings = [
             { type: 'powerPlant', icon: '⚡', name: 'Power Plant', desc: 'Generates energy for your base' },
+            { type: 'reactor', icon: '⚛️', name: 'Fusion Reactor', desc: 'Advanced high-output power generation' },
             { type: 'refinery', icon: '🏭', name: 'Refinery', desc: 'Processes ore and crystals' },
             { type: 'supplyDepot', icon: '📦', name: 'Supply Depot', desc: 'Increases unit capacity' },
             { type: 'shipyard', icon: '🚀', name: 'Shipyard', desc: 'Produces basic combat units' },
@@ -379,6 +380,7 @@ export class BuildMenu {
         const units = [
             { type: 'harvester', icon: '🚜', name: 'Harvester', desc: 'Collects resources', hotkey: 'Q' },
             { type: 'scout', icon: '👁', name: 'Scout', desc: 'Fast recon unit', hotkey: 'W' },
+            { type: 'repairDrone', icon: '🔧', name: 'Repair Drone', desc: 'Auto-heals nearby friendly ships', hotkey: 'D' },
             { type: 'interceptor', icon: '✈️', name: 'Interceptor', desc: 'Fast attack fighter', hotkey: 'E' },
             { type: 'striker', icon: '💥', name: 'Striker', desc: 'Balanced combat ship', hotkey: 'R' },
             { type: 'heavy', icon: '🛡', name: 'Heavy', desc: 'Armored assault ship', hotkey: 'T' },
