@@ -189,7 +189,10 @@ export class PreGameLobby {
      * Add CSS styles for the lobby
      */
     addStyles() {
+        if (document.getElementById('pregameLobbyStyles')) return;
+
         const style = document.createElement('style');
+        style.id = 'pregameLobbyStyles';
         style.textContent = `
             #pregame-lobby {
                 display: none;
@@ -455,6 +458,11 @@ export class PreGameLobby {
             this.container.parentNode.removeChild(this.container);
         }
         this.container = null;
+
+        const style = document.getElementById('pregameLobbyStyles');
+        if (style) {
+            style.remove();
+        }
     }
 }
 

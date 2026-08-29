@@ -179,22 +179,25 @@ export class RallyPointSection {
     }
 
     setupEventListeners() {
-        // Listen for selection changes
-        eventBus.on(GameEvents.UI_SELECTION_CHANGED, (data) => {
-            this.onSelectionChanged(data.selected || data.entities || []);
-        });
+        // Store unsubscribe functions for cleanup
+        this._unsubs = [
+            // Listen for selection changes
+            eventBus.on(GameEvents.UI_SELECTION_CHANGED, (data) => {
+                this.onSelectionChanged(data.selected || data.entities || []);
+            }),
 
-        // Listen for rally point set completion
-        eventBus.on(GameEvents.RALLY_POINT_SET, (data) => {
-            this.onRallyPointSet(data);
-        });
+            // Listen for rally point set completion
+            eventBus.on(GameEvents.RALLY_POINT_SET, (data) => {
+                this.onRallyPointSet(data);
+            }),
 
-        // Listen for command mode exit (ESC pressed, etc.)
-        eventBus.on(GameEvents.UI_BUILD_MODE_EXIT, () => {
-            if (this.isSettingRally) {
-                this.cancelSettingRally();
-            }
-        });
+            // Listen for command mode exit (ESC pressed, etc.)
+            eventBus.on(GameEvents.UI_BUILD_MODE_EXIT, () => {
+                if (this.isSettingRally) {
+                    this.cancelSettingRally();
+                }
+            })
+        ];
     }
 
     onSelectionChanged(selection) {
@@ -313,6 +316,10 @@ export class RallyPointSection {
     }
 
     dispose() {
+        // Unsubscribe from event bus listeners
+        this._unsubs?.forEach(unsub => unsub?.());
+        this._unsubs = null;
+
         this.cancelSettingRally();
         if (this.container) {
             this.container.remove();

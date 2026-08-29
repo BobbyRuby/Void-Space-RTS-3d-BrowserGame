@@ -34,6 +34,9 @@ const SOUND_DEFS = {
     ambientSpace: { type: 'ambient', volume: 0.15, loop: true }
 };
 
+// Max concurrent instances of the same sound name playing at once (voice limiting).
+const MAX_CONCURRENT_VOICES = 6;
+
 export class SoundManager {
     constructor() {
         this.audioContext = null;
@@ -45,6 +48,7 @@ export class SoundManager {
         this.sounds = new Map();
         this.activeSounds = new Map();
         this.musicTrack = null;
+        this.voiceCounts = new Map(); // soundName -> active instance count
 
         this.enabled = true;
         this.musicVolume = 0.5;
@@ -401,6 +405,22 @@ export class SoundManager {
         return buffer;
     }
 
+    // ===== Voice Limiting =====
+
+    // Returns true if another instance of soundName is allowed to start.
+    _canPlayVoice(soundName) {
+        return (this.voiceCounts.get(soundName) || 0) < MAX_CONCURRENT_VOICES;
+    }
+
+    // Tracks a started voice and releases it when the source finishes.
+    _trackVoice(soundName, source) {
+        this.voiceCounts.set(soundName, (this.voiceCounts.get(soundName) || 0) + 1);
+        source.addEventListener('ended', () => {
+            const count = this.voiceCounts.get(soundName) || 0;
+            this.voiceCounts.set(soundName, Math.max(0, count - 1));
+        });
+    }
+
     // ===== Playback Methods =====
 
     play(soundName, volume = 1) {
@@ -408,6 +428,7 @@ export class SoundManager {
 
         const buffer = this.sounds.get(soundName);
         if (!buffer) return;
+        if (!this._canPlayVoice(soundName)) return;
 
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
@@ -419,6 +440,7 @@ export class SoundManager {
         source.connect(gainNode);
         gainNode.connect(this.sfxGain);
 
+        this._trackVoice(soundName, source);
         source.start();
 
         return source;
@@ -430,6 +452,7 @@ export class SoundManager {
 
         const buffer = this.sounds.get(soundName);
         if (!buffer) return;
+        if (!this._canPlayVoice(soundName)) return;
 
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
@@ -457,6 +480,7 @@ export class SoundManager {
         gainNode.connect(panner);
         panner.connect(this.sfxGain);
 
+        this._trackVoice(soundName, source);
         source.start();
 
         return source;
@@ -536,8 +560,11 @@ export class SoundManager {
         }
 
         // Update listener position for 3D audio (follows camera)
-        if (this.scene && this.scene.activeCamera && this.audioContext) {
-            const cam = this.scene.activeCamera;
+        // this.scene is never assigned on this class; read the live scene from
+        // the SceneManager singleton instead so the listener actually tracks the camera.
+        const scene = sceneManager.scene;
+        if (scene && scene.activeCamera && this.audioContext) {
+            const cam = scene.activeCamera;
             const listener = this.audioContext.listener;
 
             if (listener.positionX) {
