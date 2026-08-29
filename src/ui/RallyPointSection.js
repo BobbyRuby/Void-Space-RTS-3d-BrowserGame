@@ -48,8 +48,6 @@ export class RallyPointSection {
             </div>
         `;
 
-        this.injectStyles();
-
         if (this.parentSection) {
             this.parentSection.appendChild(this.container);
         }
@@ -64,118 +62,6 @@ export class RallyPointSection {
         // Button listeners
         this.setRallyBtn.addEventListener('click', () => this.startSettingRally());
         this.clearRallyBtn.addEventListener('click', () => this.clearRally());
-    }
-
-    injectStyles() {
-        if (document.getElementById('rallyPointStyles')) return;
-
-        const style = document.createElement('style');
-        style.id = 'rallyPointStyles';
-        style.textContent = `
-            #rallyPointContainer {
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-            }
-
-            .rally-content {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 8px;
-            }
-
-            .rally-empty-state {
-                color: #456;
-                font-size: 10px;
-                text-align: center;
-                line-height: 1.4;
-            }
-
-            .rally-controls {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 8px;
-                width: 100%;
-            }
-
-            .rally-controls.hidden {
-                display: none;
-            }
-
-            .rally-btn {
-                width: 80px;
-                height: 36px;
-                background: rgba(0, 80, 160, 0.4);
-                border: 1px solid #0af;
-                border-radius: 4px;
-                color: #fff;
-                font-family: 'Orbitron', sans-serif;
-                font-size: 10px;
-                cursor: pointer;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 2px;
-                transition: all 0.15s;
-            }
-
-            .rally-btn:hover {
-                background: rgba(0, 120, 200, 0.6);
-                box-shadow: 0 0 10px rgba(0, 170, 255, 0.4);
-            }
-
-            .rally-btn.active {
-                background: rgba(0, 200, 100, 0.4);
-                border-color: #0f8;
-                animation: pulse 0.8s ease-in-out infinite;
-            }
-
-            @keyframes pulse {
-                0%, 100% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.3); }
-                50% { box-shadow: 0 0 15px rgba(0, 255, 136, 0.6); }
-            }
-
-            .rally-btn-danger {
-                background: rgba(100, 40, 40, 0.4);
-                border-color: #f44;
-            }
-
-            .rally-btn-danger:hover {
-                background: rgba(150, 50, 50, 0.6);
-                box-shadow: 0 0 10px rgba(255, 68, 68, 0.4);
-            }
-
-            .rally-btn-icon {
-                font-size: 14px;
-            }
-
-            .rally-btn-text {
-                font-size: 9px;
-                letter-spacing: 0.5px;
-            }
-
-            .rally-status {
-                font-size: 9px;
-                color: #68a;
-                text-align: center;
-                margin-top: 4px;
-            }
-
-            .rally-status.active {
-                color: #0f8;
-            }
-
-            /* Rally cursor when setting rally point */
-            body.cursor-rally {
-                cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">🚩</text></svg>'), crosshair;
-            }
-        `;
-        document.head.appendChild(style);
     }
 
     setupEventListeners() {

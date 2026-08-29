@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.babylonjs.com https://unpkg.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://cdn.babylonjs.com; worker-src 'self' blob:; base-uri 'self'">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -14,9 +15,9 @@
     <script src="https://unpkg.com/earcut@2.2.4/dist/earcut.min.js"></script>
 
     <!-- Enhanced models (optional) -->
-    <script src="../void-ships-enhanced.js?v=20260117" onerror="console.log('Enhanced ships not found - using default models')"></script>
-    <script src="../void-buildings-enhanced.js?v=20260117" onerror="console.log('Enhanced buildings not found - using default models')"></script>
-    <script src="../void-ore-enhanced.js?v=20260117" onerror="console.log('Enhanced ore not found - using default models')"></script>
+    <script src="../void-ships-enhanced.js?v=20260117"></script>
+    <script src="../void-buildings-enhanced.js?v=20260117"></script>
+    <script src="../void-ore-enhanced.js?v=20260117"></script>
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
@@ -132,48 +133,7 @@
         <div id="loadingText">Initializing...</div>
     </div>
 
-    <!-- Game Bootstrap -->
-    <script type="module">
-        // Import debug logger FIRST to capture all errors
-        // Cache bust: v=20260119
-        import { debugLogger } from './core/DebugLogger.js?v=20260119';
-        import { game } from './core/Game.js?v=20260119';
-        import { preGameLobby } from './ui/PreGameLobby.js?v=20260119';
-        import './ui/PauseMenu.js?v=20260119';
-        import './ui/SurvivalHUD.js?v=20260119';
-
-        // Initialize and start the game with pre-game lobby
-        window.addEventListener('DOMContentLoaded', async () => {
-            // Hide loading screen initially (lobby will show instead)
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
-
-            document.getElementById('playAgainBtn')?.addEventListener('click', () => location.reload());
-
-            // Show pre-game lobby and wait for configuration
-            preGameLobby.init(async (config) => {
-                try {
-                    // Show loading screen during initialization
-                    if (loadingScreen) {
-                        loadingScreen.style.display = 'flex';
-                    }
-
-                    // Initialize game with lobby config
-                    await game.init('renderCanvas', 'minimapCanvas', config);
-                    game.start();
-                } catch (error) {
-                    console.error('Failed to initialize game:', error);
-                    document.getElementById('loadingText').textContent = 'Error: ' + error.message;
-                }
-            });
-        });
-
-        // Instructions
-        console.log('=== DEBUG MODE ===');
-        console.log('Press Ctrl+Shift+L to download debug logs');
-        console.log('Or type: downloadLogs() in console');
-    </script>
+    <!-- Game Bootstrap (external for CSP: no inline script) -->
+    <script type="module" src="./bootstrap.js?v=20260119"></script>
 </body>
 </html>

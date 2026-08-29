@@ -22,7 +22,6 @@ export class MainPanel {
 
     init() {
         this.createUI();
-        this.injectStyles();
         this.initialized = true;
         console.log('Main Panel initialized');
     }
@@ -84,127 +83,6 @@ export class MainPanel {
             existingMinimap.style.border = 'none';
             existingMinimap.style.boxShadow = 'none';
         }
-    }
-
-    injectStyles() {
-        const style = document.createElement('style');
-        style.id = 'mainPanelStyles';
-        style.textContent = `
-            /* Main Panel - Always visible at bottom */
-            #mainPanel {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 200px;
-                display: flex;
-                background: rgba(5, 15, 30, 0.95);
-                border-top: 2px solid #0af;
-                box-shadow: 0 -4px 20px rgba(0, 150, 255, 0.3);
-                z-index: 20;
-                pointer-events: auto;
-            }
-
-            /* Panel Sections */
-            .panel-section {
-                height: 100%;
-                border-right: 1px solid #068;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-            }
-
-            .panel-section:last-child {
-                border-right: none;
-            }
-
-            /* Build Section - Fixed 300px */
-            #buildSection {
-                width: 300px;
-                min-width: 300px;
-            }
-
-            /* Selection Section - Flex fill */
-            #selectionSection {
-                flex: 1;
-                min-width: 200px;
-            }
-
-            /* Command Section - Fixed 220px */
-            #commandSection {
-                width: 220px;
-                min-width: 220px;
-            }
-
-            /* Rally Section - Fixed 100px */
-            #rallySection {
-                width: 100px;
-                min-width: 100px;
-            }
-
-            /* Minimap Section - Fixed 200px */
-            #minimapSection {
-                width: 200px;
-                min-width: 200px;
-                padding: 4px;
-            }
-
-            /* Section Headers */
-            .section-header {
-                padding: 4px 8px;
-                background: rgba(0, 100, 200, 0.2);
-                border-bottom: 1px solid #068;
-                font-family: 'Orbitron', sans-serif;
-                font-size: 10px;
-                color: #0af;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .section-content {
-                flex: 1;
-                overflow: auto;
-                padding: 4px;
-            }
-
-            /* Empty State Message */
-            .empty-state {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                color: #456;
-                font-size: 11px;
-                text-align: center;
-                padding: 10px;
-            }
-
-            /* Hide old bottomBar if it exists */
-            #bottomBar {
-                display: none !important;
-            }
-
-            /* Override minimap container when inside main panel */
-            #minimapSection #minimapContainer {
-                position: relative !important;
-                bottom: auto !important;
-                right: auto !important;
-                width: 100% !important;
-                height: 100% !important;
-                border-radius: 3px !important;
-                border: 1px solid #068 !important;
-                box-shadow: none !important;
-            }
-
-            /* Minimap label inside panel */
-            #minimapSection #minimapLabel {
-                font-size: 8px;
-            }
-        `;
-        document.head.appendChild(style);
     }
 
     // Get section element for external components to render into
