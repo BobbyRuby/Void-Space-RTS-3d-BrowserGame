@@ -345,6 +345,20 @@ export class SceneManager {
         if (this.asteroidMasterMesh && this.asteroidData.length > 0) {
             let needsUpdate = false;
 
+            // Reusable scratch objects, allocated once and reused every frame.
+            // Previously each asteroid allocated a Quaternion, a Matrix and two
+            // Vector3 per frame (~4 allocs x ~200 asteroids = ~800 allocs/frame),
+            // driving GC hitches. ToRef variants write into these instead.
+            if (!this._astScratch) {
+                this._astScratch = {
+                    quat: new BABYLON.Quaternion(),
+                    mat: BABYLON.Matrix.Identity(),
+                    scale: new BABYLON.Vector3(),
+                    pos: new BABYLON.Vector3()
+                };
+            }
+            const scratch = this._astScratch;
+
             for (let i = 0; i < this.asteroidData.length; i++) {
                 const data = this.asteroidData[i];
 
@@ -359,16 +373,14 @@ export class SceneManager {
                 const x = Math.cos(data.angle) * data.radius;
                 const z = Math.sin(data.angle) * data.radius;
 
-                // Create updated transformation matrix
-                const quaternion = BABYLON.Quaternion.FromEulerAngles(data.rotX, data.rotY, data.rotZ);
-                const matrix = BABYLON.Matrix.Compose(
-                    new BABYLON.Vector3(data.size, data.size, data.size),
-                    quaternion,
-                    new BABYLON.Vector3(x, data.y, z)
-                );
+                // Build the transform into reused scratch objects (no per-frame allocation)
+                BABYLON.Quaternion.FromEulerAnglesToRef(data.rotX, data.rotY, data.rotZ, scratch.quat);
+                scratch.scale.set(data.size, data.size, data.size);
+                scratch.pos.set(x, data.y, z);
+                BABYLON.Matrix.ComposeToRef(scratch.scale, scratch.quat, scratch.pos, scratch.mat);
 
                 // Copy to buffer
-                matrix.copyToArray(this.asteroidMatrices, i * 16);
+                scratch.mat.copyToArray(this.asteroidMatrices, i * 16);
                 needsUpdate = true;
             }
 
