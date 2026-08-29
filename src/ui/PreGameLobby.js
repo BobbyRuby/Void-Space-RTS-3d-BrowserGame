@@ -68,7 +68,7 @@ export class PreGameLobby {
                     <div class="mode-select" role="group" aria-label="Game Mode">
                         <button type="button" class="mode-btn active" data-mode="skirmish">Skirmish</button>
                         <button type="button" class="mode-btn" data-mode="sandbox">Sandbox</button>
-                        <button type="button" class="mode-btn" data-mode="survival" disabled>Survival <span class="mode-soon">soon</span></button>
+                        <button type="button" class="mode-btn" data-mode="survival">Survival</button>
                     </div>
                     <p class="mode-desc" id="mode-desc">Classic battle vs AI opponents.</p>
 
@@ -401,7 +401,7 @@ export class PreGameLobby {
         const modeInfo = {
             skirmish: 'Classic battle vs AI opponents.',
             sandbox: 'Free build, no AI. Experiment freely.',
-            survival: 'Endless escalating enemy waves. Coming soon.'
+            survival: 'Endless escalating enemy waves. Survive as long as you can.'
         };
         modeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -410,8 +410,9 @@ export class PreGameLobby {
                 btn.classList.add('active');
                 this.selectedMode = btn.dataset.mode;
                 if (modeDesc) modeDesc.textContent = modeInfo[this.selectedMode] || '';
-                // Sandbox has no AI opponents
-                if (this.selectedMode === 'sandbox') {
+                // Sandbox has no AI opponents; Survival's enemies are the waves,
+                // not AI players, so it also forces zero AI opponents.
+                if (this.selectedMode === 'sandbox' || this.selectedMode === 'survival') {
                     aiSelect.value = '0';
                     aiSelect.disabled = true;
                 } else {

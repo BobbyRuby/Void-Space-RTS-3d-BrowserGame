@@ -454,3 +454,47 @@
             color: #cff;
             font-size: 12px;
         }
+
+        /* Survival mode HUD (wave / countdown) */
+        .survival-hud {
+            display: none;
+            position: absolute;
+            top: 62px;
+            left: 50%;
+            transform: translateX(-50%);
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 8px 22px;
+            background: linear-gradient(180deg, rgba(30, 8, 40, 0.9) 0%, rgba(15, 4, 25, 0.85) 100%);
+            border: 1px solid #a06;
+            border-radius: 6px;
+            box-shadow: 0 0 18px rgba(200, 0, 120, 0.35);
+            font-family: 'Orbitron', sans-serif;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .survival-hud.visible {
+            display: flex;
+        }
+
+        .survival-wave {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f6a;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 80, 160, 0.6);
+        }
+
+        .survival-status {
+            font-size: 14px;
+            color: #fce;
+        }
+
+        .survival-score {
+            font-size: 11px;
+            color: #b8a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
