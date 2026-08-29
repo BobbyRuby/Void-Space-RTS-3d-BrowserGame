@@ -338,6 +338,8 @@ export class BuildMenu {
             { type: 'shipyard', icon: '🚀', name: 'Shipyard', desc: 'Produces basic combat units' },
             { type: 'advancedShipyard', icon: '🛸', name: 'Adv. Shipyard', desc: 'Produces advanced warships' },
             { type: 'turret', icon: '🔫', name: 'Turret', desc: 'Defensive weapon platform' },
+            { type: 'teslaTurret', icon: '⚡', name: 'Tesla Turret', desc: 'Rapid-fire short-range anti-swarm' },
+            { type: 'sniperTurret', icon: '🎯', name: 'Sniper Turret', desc: 'Long-range high-damage cannon' },
             { type: 'radar', icon: '📡', name: 'Radar', desc: 'Reveals large area of map' },
             { type: 'forceFieldGenerator', icon: '🛡️', name: 'Force Field', desc: 'Creates barriers between generators' }
         ];
@@ -386,9 +388,11 @@ export class BuildMenu {
             { type: 'heavy', icon: '🛡', name: 'Heavy', desc: 'Armored assault ship', hotkey: 'T' },
             { type: 'bomber', icon: '💣', name: 'Bomber', desc: 'Anti-building specialist', hotkey: 'Y' },
             { type: 'gunship', icon: '🔥', name: 'Gunship', desc: 'Heavy weapons platform', hotkey: 'U' },
+            { type: 'empSkirmisher', icon: '🌀', name: 'EMP Skirmisher', desc: 'Disables enemy turrets and force fields', hotkey: 'G' },
             { type: 'frigate', icon: '⚓', name: 'Frigate', desc: 'Medium warship', hotkey: 'I' },
             { type: 'cruiser', icon: '🚢', name: 'Cruiser', desc: 'Heavy warship', hotkey: 'O' },
-            { type: 'battlecruiser', icon: '⭐', name: 'Battlecruiser', desc: 'Capital ship', hotkey: 'P' }
+            { type: 'battlecruiser', icon: '⭐', name: 'Battlecruiser', desc: 'Capital ship', hotkey: 'P' },
+            { type: 'dreadnought', icon: '🔱', name: 'Dreadnought', desc: 'Capital ship - devastating firepower', hotkey: 'K' }
         ];
 
         for (const unit of units) {
