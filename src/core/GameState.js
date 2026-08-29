@@ -283,11 +283,13 @@ class GameState {
     }
 
     canAfford(team, cost) {
+        if (CONFIG.SANDBOX) return true;   // sandbox: infinite credits
         const res = this.resources[team];
         return res && res.credits >= cost;
     }
 
     spendCredits(team, amount) {
+        if (CONFIG.SANDBOX) return;   // sandbox: do not deduct credits
         if (this.canAfford(team, amount)) {
             this.modifyResource(team, 'credits', -amount);
             eventBus.emit(GameEvents.RESOURCE_SPENT, { team, amount });

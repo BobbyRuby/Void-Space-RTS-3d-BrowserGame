@@ -772,7 +772,7 @@ export class Building extends Entity {
             return false;
         }
 
-        if (res.supply + (unitDef.supply || 1) > res.maxSupply) {
+        if (!CONFIG.SANDBOX && res.supply + (unitDef.supply || 1) > res.maxSupply) {
             eventBus.emit(GameEvents.UI_ALERT, {
                 message: 'Supply limit reached',
                 type: 'danger',

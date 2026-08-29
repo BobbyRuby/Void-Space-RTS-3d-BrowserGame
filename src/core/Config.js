@@ -9,6 +9,7 @@ export let CONFIG = {
     NUM_PLAYERS: 4,
     NUM_AI_PLAYERS: 3,
     NUM_NEUTRAL_ALIENS: 2,
+    SANDBOX: false,   // sandbox mode: infinite credits + no supply cap (set via lobby config)
 
     // Ore settings (C&C style)
     ORE_FIELDS: 8,
@@ -101,6 +102,10 @@ export function applyGameConfig(lobbyConfig) {
     if (lobbyConfig.gameSpeed !== undefined) {
         CONFIG.GAME_SPEED = lobbyConfig.gameSpeed;
     }
+
+    // Sandbox mode. Set unconditionally so a normal game started after a sandbox
+    // game clears the flag (pair with numAIPlayers:0 for a no-enemies sandbox).
+    CONFIG.SANDBOX = !!lobbyConfig.sandbox;
 
     console.log('Game config applied:', CONFIG);
 }
