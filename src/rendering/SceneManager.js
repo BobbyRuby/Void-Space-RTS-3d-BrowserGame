@@ -510,7 +510,10 @@ export class SceneManager {
 
     startRenderLoop(updateCallback) {
         this.engine.runRenderLoop(() => {
-            const dt = this.engine.getDeltaTime() / 1000;
+            // Clamp per-frame dt: a throttled/backgrounded tab resuming returns a huge
+            // getDeltaTime, which would fast-forward the sim in one frame (spiral of death).
+            // Minimal clamp only, NOT a fixed-timestep refactor (that stays deferred).
+            const dt = Math.min(this.engine.getDeltaTime() / 1000, 0.1);
 
             // Update asteroids
             this.updateAsteroids(dt);
