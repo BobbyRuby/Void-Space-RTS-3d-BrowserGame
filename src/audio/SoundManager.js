@@ -47,7 +47,12 @@ export class SoundManager {
 
         this.sounds = new Map();
         this.activeSounds = new Map();
-        this.musicTrack = null;
+        this.musicTrack = null;         // calm layer
+        this.combatTrack = null;        // combat layer
+        this.musicCalmGain = null;      // crossfade gain for the calm layer
+        this.musicCombatGain = null;    // crossfade gain for the combat layer
+        this.combatIntensity = 0;       // 0..1, rises on combat events, decays over time
+        this._musicInterval = null;     // crossfade decay/apply timer
         this.voiceCounts = new Map(); // soundName -> active instance count
 
         this.enabled = true;
@@ -106,6 +111,15 @@ export class SoundManager {
             this.musicGain.connect(this.masterGain);
             this.musicGain.gain.value = this.musicVolume;
 
+            // Two music layers (calm / combat) crossfaded by combatIntensity.
+            // Both feed musicGain, so the music volume slider still governs both.
+            this.musicCalmGain = this.audioContext.createGain();
+            this.musicCalmGain.connect(this.musicGain);
+            this.musicCalmGain.gain.value = 1;   // full calm at start
+            this.musicCombatGain = this.audioContext.createGain();
+            this.musicCombatGain.connect(this.musicGain);
+            this.musicCombatGain.gain.value = 0; // combat layer silent at start
+
             this.sfxGain = this.audioContext.createGain();
             this.sfxGain.connect(this.masterGain);
             this.sfxGain.gain.value = this.sfxVolume;
@@ -120,13 +134,17 @@ export class SoundManager {
             // Setup event listeners
             this.setupEventListeners();
 
+            // Mark initialized BEFORE starting playback: playAmbient/playMusic
+            // both guard on `initialized`, so setting it after them made the
+            // first-init calls early-return and no music/ambient ever started.
+            this.initialized = true;
+
             // Start ambient space sound
             this.playAmbient();
 
-            // Start background music
+            // Start layered background music (calm + combat crossfade)
             this.playMusic();
 
-            this.initialized = true;
             console.log('Sound system initialized');
 
         } catch (error) {
@@ -142,11 +160,13 @@ export class SoundManager {
             eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => {
                 const soundType = data.damage > 50 ? 'laserHeavy' : data.damage > 20 ? 'laserMedium' : 'laserSmall';
                 this.playSpatial(soundType, data.startPos);
+                this._bumpIntensity(0.06); // each shot swells the combat music
             }),
 
             eventBus.on(GameEvents.COMBAT_EXPLOSION, (data) => {
                 const soundType = data.size > 10 ? 'explosionLarge' : 'explosion';
                 this.playSpatial(soundType, data.position);
+                this._bumpIntensity(0.15); // explosions swell it harder
             }),
 
             eventBus.on(GameEvents.ENTITY_DAMAGED, (data) => {
@@ -441,6 +461,56 @@ export class SoundManager {
         return buffer;
     }
 
+    // Combat music layer: same chord progression as generateMusic() (so the two
+    // layers stay harmonically aligned while crossfading) but faster, with a
+    // driving kick + urgent 16th-note arpeggio. Crossfaded in by combatIntensity.
+    generateCombatMusic() {
+        const duration = 48;
+        const sampleRate = this.audioContext.sampleRate;
+        const buffer = this.audioContext.createBuffer(2, duration * sampleRate, sampleRate);
+        const leftData = buffer.getChannelData(0);
+        const rightData = buffer.getChannelData(1);
+
+        const bpm = 120;
+        const beatDuration = 60 / bpm;
+
+        const chords = [
+            [130.81, 164.81, 196.00], // C minor
+            [116.54, 146.83, 174.61], // Bb major
+            [123.47, 155.56, 185.00], // B diminished
+            [130.81, 164.81, 196.00], // C minor
+        ];
+
+        for (let i = 0; i < leftData.length; i++) {
+            const t = i / sampleRate;
+            const beat = Math.floor(t / beatDuration);
+            const chord = chords[Math.floor(beat / 8) % chords.length];
+
+            // Driving kick + sub bass each beat
+            const beatPhase = (t % beatDuration) / beatDuration;
+            const kick = Math.exp(-beatPhase * 12) * Math.sin(2 * Math.PI * 60 * t) * 0.22;
+            const bass = Math.sin(2 * Math.PI * chord[0] * 0.5 * t) * 0.12;
+
+            // Urgent 16th-note arpeggio one octave up, brighter (added harmonic)
+            const sixteenth = Math.floor(t / (beatDuration / 4));
+            const arpNote = chord[sixteenth % 3] * 2;
+            const arpEnv = Math.exp(-((t % (beatDuration / 4)) * 12));
+            const arp = (
+                Math.sin(2 * Math.PI * arpNote * t) +
+                Math.sin(2 * Math.PI * arpNote * 2 * t) * 0.4
+            ) * arpEnv * 0.09;
+
+            // Sustained tension pad on the fifth
+            const pad = Math.sin(2 * Math.PI * chord[1] * t) * 0.05;
+
+            const mono = kick + bass + arp + pad;
+            leftData[i] = mono + Math.sin(2 * Math.PI * 0.15 * t) * 0.02;
+            rightData[i] = mono - Math.sin(2 * Math.PI * 0.15 * t) * 0.02;
+        }
+
+        return buffer;
+    }
+
     // ===== Voice Limiting =====
 
     // Returns true if another instance of soundName is allowed to start.
@@ -525,12 +595,51 @@ export class SoundManager {
     playMusic() {
         if (!this.enabled || !this.initialized) return;
 
-        const musicBuffer = this.generateMusic();
+        // Calm layer -> calm gain (audible when peaceful).
         this.musicTrack = this.audioContext.createBufferSource();
-        this.musicTrack.buffer = musicBuffer;
+        this.musicTrack.buffer = this.generateMusic();
         this.musicTrack.loop = true;
-        this.musicTrack.connect(this.musicGain);
+        this.musicTrack.connect(this.musicCalmGain || this.musicGain);
         this.musicTrack.start();
+
+        // Combat layer -> combat gain (silent until combatIntensity rises).
+        this.combatTrack = this.audioContext.createBufferSource();
+        this.combatTrack.buffer = this.generateCombatMusic();
+        this.combatTrack.loop = true;
+        this.combatTrack.connect(this.musicCombatGain || this.musicGain);
+        this.combatTrack.start();
+
+        this._startMusicCrossfade();
+    }
+
+    // Bumps the combat-intensity meter (0..1). Called on combat events; the
+    // crossfade timer decays it back toward calm.
+    _bumpIntensity(amount) {
+        this.combatIntensity = Math.min(1, this.combatIntensity + amount);
+    }
+
+    // Decays combatIntensity over time and equal-power crossfades the calm /
+    // combat layers. Equal-power (cos/sin) keeps perceived loudness constant
+    // across the fade. Runs off a light timer, not the render loop.
+    _startMusicCrossfade() {
+        if (this._musicInterval) return;
+        const DECAY = 0.9;        // per-tick multiplier (~250ms tick)
+        const TICK_MS = 250;
+        this._musicInterval = setInterval(() => {
+            try {
+                if (!this.audioContext || !this.musicCalmGain || !this.musicCombatGain) return;
+                this.combatIntensity *= DECAY;
+                if (this.combatIntensity < 0.01) this.combatIntensity = 0;
+                const i = this.combatIntensity;
+                const calm = Math.cos(i * Math.PI / 2);
+                const combat = Math.sin(i * Math.PI / 2);
+                const t = this.audioContext.currentTime;
+                this.musicCalmGain.gain.setTargetAtTime(calm, t, 0.2);
+                this.musicCombatGain.gain.setTargetAtTime(combat, t, 0.2);
+            } catch (e) {
+                // Never let the audio timer throw into the page.
+            }
+        }, TICK_MS);
     }
 
     playAmbient() {
@@ -629,8 +738,15 @@ export class SoundManager {
         this._unsubs?.forEach(unsub => unsub?.());
         this._unsubs = null;
 
+        if (this._musicInterval) {
+            clearInterval(this._musicInterval);
+            this._musicInterval = null;
+        }
         if (this.musicTrack) {
-            this.musicTrack.stop();
+            try { this.musicTrack.stop(); } catch (e) {}
+        }
+        if (this.combatTrack) {
+            try { this.combatTrack.stop(); } catch (e) {}
         }
 
         this.activeSounds.forEach(source => {
