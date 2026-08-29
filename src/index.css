@@ -190,8 +190,15 @@
 
         .final-stats {
             display: flex;
-            gap: 28px;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 18px;
+            max-width: 440px;
             margin-bottom: 32px;
+        }
+
+        .stat-cell.hidden {
+            display: none;
         }
 
         .stat-cell {

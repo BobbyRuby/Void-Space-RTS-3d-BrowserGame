@@ -798,6 +798,20 @@ export class Game {
         this.updateElement('finalBuilt', stats.unitsBuilt);
         this.updateElement('finalLost', stats.unitsLost);
         this.updateElement('finalKills', stats.enemyKilled);
+        this.updateElement('finalBuildings', stats.buildingsBuilt);
+
+        // Match time (gameState.gameTime accumulates seconds) as m:ss
+        const secs = Math.floor(gameState.gameTime || 0);
+        this.updateElement('finalTime', Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0'));
+
+        // Waves survived only makes sense in Survival mode; hide the cell otherwise.
+        const waveCell = document.getElementById('waveCell');
+        if (gameState.survival && gameState.survival.active) {
+            this.updateElement('finalWaves', gameState.survival.wavesCleared);
+            if (waveCell) waveCell.classList.remove('hidden');
+        } else if (waveCell) {
+            waveCell.classList.add('hidden');
+        }
     }
 
     // ===== Stealth Detection (VOTE-017) =====
