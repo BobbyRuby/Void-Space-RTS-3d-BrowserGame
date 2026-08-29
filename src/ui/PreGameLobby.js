@@ -35,7 +35,10 @@ export class PreGameLobby {
             // Game options
             fogOfWar: false,
             aiDifficulty: 'normal', // easy, normal, hard
-            gameSpeed: 1.0
+            gameSpeed: 1.0,
+
+            // Game mode: skirmish | sandbox | survival
+            mode: 'skirmish'
         };
     }
 
@@ -61,6 +64,13 @@ export class PreGameLobby {
                 <div class="lobby-panel">
                     <h1 class="lobby-title">VOID SUPREMACY</h1>
                     <h2 class="lobby-subtitle">Game Configuration</h2>
+
+                    <div class="mode-select" role="group" aria-label="Game Mode">
+                        <button type="button" class="mode-btn active" data-mode="skirmish">Skirmish</button>
+                        <button type="button" class="mode-btn" data-mode="sandbox">Sandbox</button>
+                        <button type="button" class="mode-btn" data-mode="survival" disabled>Survival <span class="mode-soon">soon</span></button>
+                    </div>
+                    <p class="mode-desc" id="mode-desc">Classic battle vs AI opponents.</p>
 
                     <div class="lobby-sections">
                         <!-- Map Settings -->
@@ -383,6 +393,33 @@ export class PreGameLobby {
             seedDisplay.textContent = seedInput.value || 'Random';
         });
 
+        // Mode select
+        this.selectedMode = 'skirmish';
+        const modeBtns = this.container.querySelectorAll('.mode-btn');
+        const modeDesc = this.container.querySelector('#mode-desc');
+        const aiSelect = this.container.querySelector('#num-ai');
+        const modeInfo = {
+            skirmish: 'Classic battle vs AI opponents.',
+            sandbox: 'Free build, no AI. Experiment freely.',
+            survival: 'Endless escalating enemy waves. Coming soon.'
+        };
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                modeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.selectedMode = btn.dataset.mode;
+                if (modeDesc) modeDesc.textContent = modeInfo[this.selectedMode] || '';
+                // Sandbox has no AI opponents
+                if (this.selectedMode === 'sandbox') {
+                    aiSelect.value = '0';
+                    aiSelect.disabled = true;
+                } else {
+                    aiSelect.disabled = false;
+                }
+            });
+        });
+
         // Start button
         const startBtn = this.container.querySelector('#start-game-btn');
         startBtn.addEventListener('click', () => {
@@ -409,6 +446,7 @@ export class PreGameLobby {
         this.config.aiDifficulty = this.container.querySelector('#ai-difficulty').value;
         this.config.gameSpeed = parseFloat(this.container.querySelector('#game-speed').value);
         this.config.fogOfWar = this.container.querySelector('#fog-of-war').checked;
+        this.config.mode = this.selectedMode || 'skirmish';
 
         // Emit config ready event
         eventBus.emit(GameEvents.GAME_CONFIG_READY, this.config);

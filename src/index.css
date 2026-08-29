@@ -265,3 +265,56 @@
         #bottomBar > * {
             pointer-events: auto;
         }
+
+        /* Game mode selector (lobby) */
+        .mode-select {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 0 0 12px;
+        }
+
+        .mode-btn {
+            flex: 0 0 auto;
+            padding: 8px 20px;
+            background: rgba(0, 60, 110, 0.4);
+            color: #8bd;
+            border: 1px solid #0a6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .mode-btn:hover:not(:disabled) {
+            background: rgba(0, 120, 200, 0.5);
+            color: #cff;
+        }
+
+        .mode-btn.active {
+            background: #0af;
+            color: #012;
+            border-color: #0cf;
+            font-weight: bold;
+        }
+
+        .mode-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .mode-soon {
+            font-size: 9px;
+            opacity: 0.7;
+            vertical-align: super;
+        }
+
+        .mode-desc {
+            text-align: center;
+            color: #7ab;
+            font-size: 12px;
+            margin: 0 0 16px;
+            min-height: 14px;
+        }
