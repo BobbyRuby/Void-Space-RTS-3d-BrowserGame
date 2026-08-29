@@ -447,6 +447,8 @@ export class BuildMenu {
                 ${cost.energy ? `<span class="cost-item ${(playerRes.energy || 0) < cost.energy ? 'insufficient' : ''}">
                     ⚡ ${cost.energy}
                 </span>` : ''}
+                ${config.buildTime ? `<span class="cost-item">⏱ ${config.buildTime}s</span>` : ''}
+                ${(config.requires && config.requires.length) ? `<span class="cost-item">🔧 Requires: ${config.requires.map(r => this._buildingLabel(r)).join(', ')}</span>` : ''}
             `;
         }
     }
@@ -454,6 +456,7 @@ export class BuildMenu {
     showUnitInfo(item, config, cost) {
         const playerRes = gameState.getResources(TEAMS.PLAYER) || {};
         cost = cost || normalizeCost(config.cost);
+        const producer = this._producerFor(item.type);
 
         // Use cached elements
         if (this._infoName) this._infoName.textContent = item.name;
@@ -468,8 +471,25 @@ export class BuildMenu {
                 </span>` : ''}
                 <span class="cost-item">⏱ ${(config.buildTime || 0)}s</span>
                 <span class="cost-item">👥 ${config.supply || 1}</span>
+                ${producer ? `<span class="cost-item">🏭 ${producer}</span>` : ''}
             `;
         }
+    }
+
+    _buildingLabel(type) {
+        const labels = {
+            commandCenter: 'Command Center', powerPlant: 'Power Plant', refinery: 'Refinery',
+            supplyDepot: 'Supply Depot', shipyard: 'Shipyard', advancedShipyard: 'Adv. Shipyard',
+            turret: 'Turret', radar: 'Radar', forceFieldGenerator: 'Force Field'
+        };
+        return labels[type] || type;
+    }
+
+    _producerFor(unitType) {
+        for (const t in BUILDINGS) {
+            if (BUILDINGS[t]?.canBuild?.includes(unitType)) return this._buildingLabel(t);
+        }
+        return null;
     }
 
     updateItemStates() {
