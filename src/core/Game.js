@@ -733,9 +733,15 @@ export class Game {
             return;
         }
 
-        // Check if all enemies are defeated
+        // Check if all enemies are defeated. Enemy factions are the AI player teams
+        // (TEAMS.PLAYER+1 .. below TEAMS.NEUTRAL); teams TEAMS.NEUTRAL+ are neutral aliens
+        // and are NOT counted for victory by design - even if provoke() has flipped their
+        // hostility (that is why this derives from the player/neutral boundary, not the
+        // mutable hostility matrix). Behavior-neutral vs the old hardcoded `t<4`, minus the
+        // magic number and the latent AI>3 edge. Whether aliens SHOULD block victory is a
+        // separate CEO win-condition decision (not decided here).
         let enemiesRemain = false;
-        for (let t = 1; t < 4; t++) {
+        for (let t = TEAMS.PLAYER + 1; t < TEAMS.NEUTRAL; t++) {
             const enemyBuildings = gameState.buildings.filter(b =>
                 !b.dead && b.team === t
             );
