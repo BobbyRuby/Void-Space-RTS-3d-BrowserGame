@@ -52,6 +52,9 @@ export class Unit extends Entity {
         this.cargoType = null; // 'ore' or 'crystal'
         this.isReturning = false;
 
+        // Repair drone (support unit) - the friendly unit currently being healed
+        this.repairTarget = null;
+
         // Supply this unit actually consumed at spawn. Starting-army units are
         // spawned without charging supply, so they must refund 0 on death; trained
         // units are set to their def.supply by the UNIT_SPAWNED handler. die()
@@ -325,6 +328,12 @@ export class Unit extends Entity {
             return;
         }
 
+        // Repair-drone logic (support unit - heals friendly units, no weapon)
+        if (this.type === 'repairDrone') {
+            this.updateRepairDrone(dt);
+            return;
+        }
+
         // Combat logic - handle multi-target capital ships
         const maxTargets = this.def.multiTarget || 1;
 
@@ -553,6 +562,73 @@ export class Unit extends Entity {
                 this.updateMovement(dt);
             }
         }
+    }
+
+    updateRepairDrone(dt) {
+        // Drop a target that is gone, dead, mesh-less, or already at full health
+        if (this.repairTarget &&
+            (this.repairTarget.dead ||
+             !this.repairTarget.mesh ||
+             this.repairTarget.health >= this.repairTarget.maxHealth)) {
+            this.repairTarget = null;
+        }
+
+        // Auto-acquire the nearest damaged friendly unit if we have none
+        if (!this.repairTarget) {
+            this.repairTarget = this.findRepairTarget();
+        }
+
+        if (this.repairTarget && this.repairTarget.mesh) {
+            const range = this.def.repairRange || 40;
+            const dist = this.distanceTo(this.repairTarget);
+            if (dist > range) {
+                // Move into repair range
+                this.command = 'move';
+                this.moveToward(
+                    this.repairTarget.mesh.position.x,
+                    this.repairTarget.mesh.position.z,
+                    dt
+                );
+            } else {
+                // Heal, capped at the target's maxHealth
+                this.command = 'repair';
+                const healAmount = Math.min(
+                    (this.def.repairRate || 0) * dt,
+                    this.repairTarget.maxHealth - this.repairTarget.health
+                );
+                this.repairTarget.health += healAmount;
+            }
+            return;
+        }
+
+        // Nothing to repair - follow any standing move order, else idle
+        this.command = 'idle';
+        this.updateMovement(dt);
+    }
+
+    findRepairTarget() {
+        let closest = null;
+        let closestDist = (this.def.repairRange || 40) * 1.5;
+
+        for (const ent of gameState.units) {
+            if (ent === this || ent.dead || !ent.mesh) continue;
+            if (ent.team !== this.team) continue;
+            if (ent.health >= ent.maxHealth) continue;
+
+            const dist = this.distanceTo(ent);
+            if (dist < closestDist) {
+                closest = ent;
+                closestDist = dist;
+            }
+        }
+        return closest;
+    }
+
+    // Explicit player/AI order to repair a specific friendly unit
+    repairUnit(target) {
+        if (!target || target === this || target.team !== this.team) return;
+        this.repairTarget = target;
+        this.command = 'repair';
     }
 
     updateMovement(dt) {

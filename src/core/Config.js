@@ -228,7 +228,7 @@ export const BUILDINGS = {
         energyDrain: 5,
         supplyProvided: 15,
         buildTime: 0,
-        canBuild: ['harvester', 'scout'],
+        canBuild: ['harvester', 'scout', 'repairDrone'],
         color: [0.2, 0.6, 0.8]
     },
     powerPlant: {
@@ -358,6 +358,24 @@ export const UNITS = {
         harvestRate: 30,
         cargoCapacity: 200,
         color: [0.6, 0.5, 0.3]
+    },
+    repairDrone: {
+        // U2 Repair Drone (VOTE-016): net-new support unit, roster has no healer.
+        // Non-combat. Auto-acquires the nearest damaged friendly unit within
+        // repairRange and restores repairRate HP/s (capped at target.maxHealth).
+        // Behavior in Unit.updateRepairDrone. Balance numbers are placeholders.
+        name: 'Repair Drone',
+        icon: '🔧',
+        size: 3,
+        maxHealth: 120,
+        shield: 0,
+        speed: 28,
+        cost: 150,
+        supply: 2,
+        buildTime: 14,
+        repairRate: 40,
+        repairRange: 40,
+        color: [0.3, 0.9, 0.5]
     },
     scout: {
         name: 'Scout',
