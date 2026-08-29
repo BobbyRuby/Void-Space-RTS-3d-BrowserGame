@@ -841,13 +841,19 @@ export class Unit extends Entity {
     // ===== Target Finding =====
 
     findTarget() {
+        const maxRange = this.def.range * 1.5;
         let closest = null;
-        let closestDist = this.def.range * 1.5;
+        let closestDist = maxRange;
 
-        for (const ent of gameState.entities) {
-            if (ent.dead || ent.team === this.team) continue;
-            if (!gameState.isHostile(this.team, ent.team)) continue;
-
+        // Spatial-grid query instead of an O(n) scan of every entity. The grid
+        // returns only candidates within maxRange; the exact distance is
+        // re-checked below so the result matches the old full-scan. The grid is
+        // one tick stale (accepted, imperceptible for target acquisition).
+        const candidates = gameState.queryNearbyEntities(
+            this.mesh.position.x, this.mesh.position.z, maxRange,
+            (ent) => !ent.dead && ent.team !== this.team && gameState.isHostile(this.team, ent.team)
+        );
+        for (const ent of candidates) {
             const dist = this.distanceTo(ent);
             if (dist < closestDist) {
                 closest = ent;
@@ -861,13 +867,17 @@ export class Unit extends Entity {
         const targets = [];
         const maxRange = this.def.range * 1.5;
 
-        // Get all valid enemies sorted by distance
+        // Spatial-grid query instead of an O(n) scan. Same predicate as the old
+        // full-scan (skip dead, own-team, non-hostile, already-targeted); the
+        // exact distance is re-checked below so results are identical (grid is
+        // one tick stale, accepted).
+        const candidates = gameState.queryNearbyEntities(
+            this.mesh.position.x, this.mesh.position.z, maxRange,
+            (ent) => !ent.dead && ent.team !== this.team &&
+                gameState.isHostile(this.team, ent.team) && !this.attackTargets.includes(ent)
+        );
         const enemies = [];
-        for (const ent of gameState.entities) {
-            if (ent.dead || ent.team === this.team) continue;
-            if (!gameState.isHostile(this.team, ent.team)) continue;
-            if (this.attackTargets.includes(ent)) continue; // Skip already targeted
-
+        for (const ent of candidates) {
             const dist = this.distanceTo(ent);
             if (dist < maxRange) {
                 enemies.push({ ent, dist });
