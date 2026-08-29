@@ -679,7 +679,7 @@ export class Unit extends Entity {
 
     isEmpTargetable(ent) {
         return !!ent &&
-            (ent.type === 'turret' || ent.type === 'forceFieldGenerator') &&
+            ((ent.def && ent.def.isDefenseTurret) || ent.type === 'forceFieldGenerator') &&
             gameState.isHostile(this.team, ent.team);
     }
 

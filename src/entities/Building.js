@@ -614,8 +614,8 @@ export class Building extends Entity {
             }
         }
 
-        // Turret combat (EMP-silenced while disabledUntil is in the future)
-        if (this.type === 'turret' && !this.isConstructing && performance.now() >= this.disabledUntil) {
+        // Turret combat (any isDefenseTurret variant; EMP-silenced while disabledUntil is future)
+        if (this.def.isDefenseTurret && !this.isConstructing && performance.now() >= this.disabledUntil) {
             const target = this.findTarget();
             if (target && target.mesh) {
                 // Rotate turret to face target (if turretHead exists)

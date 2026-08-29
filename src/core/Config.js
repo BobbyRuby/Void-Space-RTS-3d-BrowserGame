@@ -302,8 +302,44 @@ export const BUILDINGS = {
         range: 70,
         fireRate: 400,
         weaponType: 'cannon',
+        isDefenseTurret: true,   // gates the auto-fire loop (Building.js turret-combat block)
         hardpoints: [{ x: -1.2, y: 2, z: 4 }, { x: 1.2, y: 2, z: 4 }],
         color: [0.6, 0.3, 0.3]
+    },
+    teslaTurret: {
+        // S1 Tesla turret variant (VOTE-016): short range, rapid fire, anti-swarm.
+        // Ground only. Fires via the shared Building turret loop (isDefenseTurret).
+        // No hardpoints -> single-shot fallback. Generic placeholder mesh. Placeholders.
+        name: 'Tesla Turret',
+        icon: '⚡',
+        size: 5,
+        maxHealth: 450,
+        cost: 250,
+        energyDrain: 5,
+        buildTime: 18,
+        damage: 15,
+        range: 45,
+        fireRate: 200,
+        weaponType: 'laser',
+        isDefenseTurret: true,
+        color: [0.4, 0.7, 0.9]
+    },
+    sniperTurret: {
+        // S1 Sniper turret variant (VOTE-016): long range, slow, high single-shot.
+        // Ground only. Shared turret loop. Placeholder mesh + balance.
+        name: 'Sniper Turret',
+        icon: '🎯',
+        size: 5,
+        maxHealth: 400,
+        cost: 350,
+        energyDrain: 6,
+        buildTime: 22,
+        damage: 120,
+        range: 160,
+        fireRate: 2000,
+        weaponType: 'cannon',
+        isDefenseTurret: true,
+        color: [0.5, 0.5, 0.35]
     },
     supplyDepot: {
         name: 'Supply Depot',
