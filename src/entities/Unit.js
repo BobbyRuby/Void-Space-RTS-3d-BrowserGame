@@ -604,6 +604,7 @@ export class Unit extends Entity {
         this.attackTarget = null;
         this.isAttackMoving = false;
         this.patrolPoints = null;
+        this.command = 'move';
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,
@@ -615,6 +616,7 @@ export class Unit extends Entity {
     attack(target) {
         this.attackTarget = target;
         this.isAttackMoving = false;
+        this.command = 'attack';
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,
@@ -628,6 +630,7 @@ export class Unit extends Entity {
         this.targetZ = z;
         this.isAttackMoving = true;
         this.patrolPoints = null;
+        this.command = 'attackMove';
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,
@@ -641,6 +644,7 @@ export class Unit extends Entity {
         this.patrolIndex = 0;
         this.attackTarget = null;
         this.isAttackMoving = false;
+        this.command = 'patrol';
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,
@@ -655,6 +659,7 @@ export class Unit extends Entity {
         this.attackTarget = null;
         this.isAttackMoving = false;
         this.patrolPoints = null;
+        this.command = 'idle';
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,
@@ -667,6 +672,7 @@ export class Unit extends Entity {
         if (this.holdPosition) {
             this.stop();
         }
+        this.command = this.holdPosition ? 'hold' : 'idle';
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,
@@ -678,6 +684,7 @@ export class Unit extends Entity {
     harvest(oreNode) {
         this.harvestTarget = oreNode;
         this.isReturning = false;
+        this.command = 'harvest';
 
         eventBus.emit(GameEvents.UNIT_COMMAND, {
             unit: this,
