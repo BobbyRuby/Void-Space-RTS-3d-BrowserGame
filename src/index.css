@@ -381,3 +381,28 @@
             background: rgba(150, 30, 30, 0.5);
             color: #fff;
         }
+
+        /* Audio settings rows */
+        .audio-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 0;
+        }
+
+        .audio-row label {
+            flex: 0 0 60px;
+            color: #9bd;
+            font-size: 13px;
+        }
+
+        .audio-row input[type="range"] {
+            flex: 1 1 auto;
+        }
+
+        .audio-val {
+            flex: 0 0 32px;
+            text-align: right;
+            color: #cff;
+            font-size: 12px;
+        }

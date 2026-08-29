@@ -6,6 +6,7 @@
 import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js?v=20260119';
 import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 import { graphicsManager } from '../rendering/GraphicsManager.js?v=20260119';
+import { soundManager } from '../audio/SoundManager.js?v=20260119';
 
 // Note: eventBus and GameEvents are used for emitting SETTINGS_OPEN/SETTINGS_CLOSE events
 
@@ -42,6 +43,28 @@ export class SettingsPanel {
                         </div>
                         <div class="quality-description" id="qualityDescription">
                             ${this.getQualityDescription(this.currentLevel)}
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Audio</h3>
+                        <div class="audio-row">
+                            <label for="volMaster">Master</label>
+                            <input type="range" id="volMaster" min="0" max="100" value="100">
+                            <span class="audio-val" id="volMasterVal">100</span>
+                        </div>
+                        <div class="audio-row">
+                            <label for="volMusic">Music</label>
+                            <input type="range" id="volMusic" min="0" max="100" value="50">
+                            <span class="audio-val" id="volMusicVal">50</span>
+                        </div>
+                        <div class="audio-row">
+                            <label for="volSfx">SFX</label>
+                            <input type="range" id="volSfx" min="0" max="100" value="70">
+                            <span class="audio-val" id="volSfxVal">70</span>
+                        </div>
+                        <div class="audio-row">
+                            <label for="muteAll">Mute</label>
+                            <input type="checkbox" id="muteAll">
                         </div>
                     </div>
                     <div class="settings-section">
@@ -334,6 +357,27 @@ export class SettingsPanel {
                 this.setQuality(level);
             });
         });
+
+        // Audio volume sliders
+        const muteBox = this.container.querySelector('#muteAll');
+        const masterSlider = this.container.querySelector('#volMaster');
+        const bindVol = (id, apply) => {
+            const slider = this.container.querySelector('#' + id);
+            const valEl = this.container.querySelector('#' + id + 'Val');
+            if (!slider) return;
+            slider.addEventListener('input', () => {
+                if (valEl) valEl.textContent = slider.value;
+                apply(parseInt(slider.value, 10) / 100);
+            });
+        };
+        bindVol('volMaster', (v) => { if (!muteBox || !muteBox.checked) soundManager.setMasterVolume(v); });
+        bindVol('volMusic', (v) => soundManager.setMusicVolume(v));
+        bindVol('volSfx', (v) => soundManager.setSfxVolume(v));
+        if (muteBox && masterSlider) {
+            muteBox.addEventListener('change', () => {
+                soundManager.setMasterVolume(muteBox.checked ? 0 : parseInt(masterSlider.value, 10) / 100);
+            });
+        }
 
         // Update performance stats periodically when visible
         this.perfUpdateInterval = null;
