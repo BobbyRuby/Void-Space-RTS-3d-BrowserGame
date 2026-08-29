@@ -51,10 +51,45 @@ export class SoundManager {
         this.voiceCounts = new Map(); // soundName -> active instance count
 
         this.enabled = true;
+        this.masterVolume = 1;
         this.musicVolume = 0.5;
         this.sfxVolume = 0.7;
+        this.muted = false;
 
         this.initialized = false;
+
+        // Restore persisted volume preferences (survives reloads).
+        this.loadPersistedVolumes();
+    }
+
+    // ===== Persistence =====
+
+    loadPersistedVolumes() {
+        try {
+            const read = (key, fallback) => {
+                const raw = localStorage.getItem(key);
+                if (raw === null) return fallback;
+                const n = parseFloat(raw);
+                return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : fallback;
+            };
+            this.masterVolume = read('vs_vol_master', this.masterVolume);
+            this.musicVolume = read('vs_vol_music', this.musicVolume);
+            this.sfxVolume = read('vs_vol_sfx', this.sfxVolume);
+            this.muted = localStorage.getItem('vs_muted') === '1';
+        } catch (e) {
+            // localStorage unavailable (private mode / disabled) - keep defaults.
+        }
+    }
+
+    _persistVolumes() {
+        try {
+            localStorage.setItem('vs_vol_master', String(this.masterVolume));
+            localStorage.setItem('vs_vol_music', String(this.musicVolume));
+            localStorage.setItem('vs_vol_sfx', String(this.sfxVolume));
+            localStorage.setItem('vs_muted', this.muted ? '1' : '0');
+        } catch (e) {
+            // Non-fatal: preferences simply will not persist this session.
+        }
     }
 
     async init() {
@@ -65,6 +100,7 @@ export class SoundManager {
             // Create gain nodes for volume control
             this.masterGain = this.audioContext.createGain();
             this.masterGain.connect(this.audioContext.destination);
+            this.masterGain.gain.value = this.muted ? 0 : this.masterVolume;
 
             this.musicGain = this.audioContext.createGain();
             this.musicGain.connect(this.masterGain);
@@ -515,9 +551,11 @@ export class SoundManager {
     // ===== Volume Controls =====
 
     setMasterVolume(volume) {
+        this.masterVolume = Math.max(0, Math.min(1, volume));
         if (this.masterGain) {
-            this.masterGain.gain.value = Math.max(0, Math.min(1, volume));
+            this.masterGain.gain.value = this.muted ? 0 : this.masterVolume;
         }
+        this._persistVolumes();
     }
 
     setMusicVolume(volume) {
@@ -525,6 +563,7 @@ export class SoundManager {
         if (this.musicGain) {
             this.musicGain.gain.value = this.musicVolume;
         }
+        this._persistVolumes();
     }
 
     setSfxVolume(volume) {
@@ -532,14 +571,24 @@ export class SoundManager {
         if (this.sfxGain) {
             this.sfxGain.gain.value = this.sfxVolume;
         }
+        this._persistVolumes();
+    }
+
+    // Mute toggles applied gain to 0 without discarding the chosen master level.
+    setMuted(muted) {
+        this.muted = !!muted;
+        if (this.masterGain) {
+            this.masterGain.gain.value = this.muted ? 0 : this.masterVolume;
+        }
+        this._persistVolumes();
     }
 
     mute() {
-        this.setMasterVolume(0);
+        this.setMuted(true);
     }
 
     unmute() {
-        this.setMasterVolume(1);
+        this.setMuted(false);
     }
 
     toggle() {

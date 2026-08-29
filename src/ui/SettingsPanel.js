@@ -358,9 +358,21 @@ export class SettingsPanel {
             });
         });
 
-        // Audio volume sliders
+        // Audio volume sliders. Reflect persisted values first, then wire changes.
         const muteBox = this.container.querySelector('#muteAll');
-        const masterSlider = this.container.querySelector('#volMaster');
+        const setSlider = (id, fraction) => {
+            const slider = this.container.querySelector('#' + id);
+            const valEl = this.container.querySelector('#' + id + 'Val');
+            if (!slider) return;
+            const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
+            slider.value = String(pct);
+            if (valEl) valEl.textContent = String(pct);
+        };
+        setSlider('volMaster', soundManager.masterVolume);
+        setSlider('volMusic', soundManager.musicVolume);
+        setSlider('volSfx', soundManager.sfxVolume);
+        if (muteBox) muteBox.checked = soundManager.muted;
+
         const bindVol = (id, apply) => {
             const slider = this.container.querySelector('#' + id);
             const valEl = this.container.querySelector('#' + id + 'Val');
@@ -370,13 +382,11 @@ export class SettingsPanel {
                 apply(parseInt(slider.value, 10) / 100);
             });
         };
-        bindVol('volMaster', (v) => { if (!muteBox || !muteBox.checked) soundManager.setMasterVolume(v); });
+        bindVol('volMaster', (v) => soundManager.setMasterVolume(v));
         bindVol('volMusic', (v) => soundManager.setMusicVolume(v));
         bindVol('volSfx', (v) => soundManager.setSfxVolume(v));
-        if (muteBox && masterSlider) {
-            muteBox.addEventListener('change', () => {
-                soundManager.setMasterVolume(muteBox.checked ? 0 : parseInt(masterSlider.value, 10) / 100);
-            });
+        if (muteBox) {
+            muteBox.addEventListener('change', () => soundManager.setMuted(muteBox.checked));
         }
 
         // Update performance stats periodically when visible
