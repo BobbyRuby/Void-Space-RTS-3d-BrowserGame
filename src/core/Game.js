@@ -162,6 +162,10 @@ export class Game {
         eventBus.on(GameEvents.UNIT_SPAWNED, (data) => {
             const unit = this.createUnit(data.position.x, data.position.z, data.team, data.unitType, scene);
 
+            // Record the supply this trained unit consumed at queue time (Building.js
+            // charges unitDef.supply||1), so die() refunds exactly that. Matches the charge.
+            unit.supplyCharged = (UNITS[data.unitType]?.supply ?? 1);
+
             // Auto-rally or auto-harvest
             if (data.rallyPoint) {
                 unit.moveTo(data.rallyPoint.x, data.rallyPoint.z);

@@ -52,6 +52,12 @@ export class Unit extends Entity {
         this.cargoType = null; // 'ore' or 'crystal'
         this.isReturning = false;
 
+        // Supply this unit actually consumed at spawn. Starting-army units are
+        // spawned without charging supply, so they must refund 0 on death; trained
+        // units are set to their def.supply by the UNIT_SPAWNED handler. die()
+        // refunds exactly this, which prevents supply underflow on starter death.
+        this.supplyCharged = 0;
+
         // Store team color for LOD billboard
         this.teamColor = TEAM_COLORS[this.team] ?
             new BABYLON.Color3(TEAM_COLORS[this.team].r, TEAM_COLORS[this.team].g, TEAM_COLORS[this.team].b) :
@@ -877,7 +883,7 @@ export class Unit extends Entity {
         LODManager.unregister(this.id);
 
         // Update supply
-        gameState.modifyResource(this.team, 'supply', -this.def.supply);
+        gameState.modifyResource(this.team, 'supply', -(this.supplyCharged || 0));
         gameState.recordUnitLost(this.team);
 
         if (killer) {
