@@ -648,6 +648,9 @@ export class Game {
 
         gameState.update(dt);
 
+        // Refresh stealth detection before entities acquire targets this tick
+        this.updateStealthDetection();
+
         // Update all entities
         for (const entity of gameState.entities) {
             entity.update(dt);
@@ -795,6 +798,32 @@ export class Game {
         this.updateElement('finalBuilt', stats.unitsBuilt);
         this.updateElement('finalLost', stats.unitsLost);
         this.updateElement('finalKills', stats.enemyKilled);
+    }
+
+    // ===== Stealth Detection (VOTE-017) =====
+
+    // A def.stealth unit is untargetable + fog-hidden unless a HOSTILE sensor
+    // building (radar, def.sensorRange) is within range of it. Recomputed each
+    // tick; findTarget (Unit + turret) and fog visibility read unit.detected.
+    updateStealthDetection() {
+        const units = gameState.units;
+        const buildings = gameState.buildings;
+        for (const u of units) {
+            if (u.dead || !u.def || !u.def.stealth || !u.mesh) continue;
+            u.detected = false;
+            for (const b of buildings) {
+                if (b.dead || b.isConstructing || !b.mesh) continue;
+                const range = b.def && b.def.sensorRange;
+                if (!range) continue;                              // only sensor buildings
+                if (!gameState.isHostile(b.team, u.team)) continue; // hostile sensors only
+                const dx = b.mesh.position.x - u.mesh.position.x;
+                const dz = b.mesh.position.z - u.mesh.position.z;
+                if (dx * dx + dz * dz <= range * range) {
+                    u.detected = true;
+                    break;
+                }
+            }
+        }
     }
 
     // ===== Survival Mode (wave director) =====

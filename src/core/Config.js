@@ -300,7 +300,7 @@ export const BUILDINGS = {
         cost: 900,
         energyDrain: 10,
         buildTime: 50,
-        canBuild: ['frigate', 'cruiser', 'battlecruiser', 'dreadnought'],
+        canBuild: ['frigate', 'cruiser', 'battlecruiser', 'dreadnought', 'phantom'],
         color: [0.5, 0.3, 0.7]
     },
     turret: {
@@ -445,6 +445,28 @@ export const UNITS = {
         empDuration: 6,
         empCooldown: 5000,
         color: [0.5, 0.4, 0.9]
+    },
+    phantom: {
+        // VOTE-017 Stealth unit (paired with the existing Radar as its counter).
+        // stealth:true = not targetable by hostiles and hidden in fog UNLESS a
+        // HOSTILE sensor building (radar, def.sensorRange) is within range of it
+        // (Game.updateStealthDetection sets unit.detected). Balance = placeholders.
+        name: 'Phantom',
+        icon: '👁',
+        size: 3,
+        maxHealth: 90,
+        shield: 40,
+        speed: 32,
+        cost: 300,
+        supply: 3,
+        buildTime: 20,
+        damage: 30,
+        range: 50,
+        fireRate: 350,
+        weaponType: 'plasma',
+        stealth: true,
+        hardpoints: [{ x: 0, y: 0, z: 1 }],
+        color: [0.35, 0.35, 0.45]
     },
     scout: {
         name: 'Scout',

@@ -330,7 +330,13 @@ export class FogOfWar {
             if (entity.dead || !entity.mesh) continue;
 
             // Check if visible to player
-            const visible = this.isEntityVisible(TEAMS.PLAYER, entity);
+            let visible = this.isEntityVisible(TEAMS.PLAYER, entity);
+
+            // Stealth (VOTE-017): an enemy stealth unit stays hidden even inside
+            // explored fog unless it has been detected by a hostile sensor.
+            if (entity.def && entity.def.stealth && !entity.detected) {
+                visible = false;
+            }
 
             // Update entity mesh visibility
             if (entity.team !== TEAMS.PLAYER) {

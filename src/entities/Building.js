@@ -704,6 +704,9 @@ export class Building extends Entity {
         for (const ent of gameState.entities) {
             if (ent.dead || ent.team === this.team) continue;
             if (!gameState.isHostile(this.team, ent.team)) continue;
+            // Skip undetected stealth units (VOTE-017) - untargetable until a
+            // hostile sensor detects them this tick.
+            if (ent.def && ent.def.stealth && !ent.detected) continue;
 
             const dist = Math.hypot(
                 ent.mesh.position.x - this.mesh.position.x,

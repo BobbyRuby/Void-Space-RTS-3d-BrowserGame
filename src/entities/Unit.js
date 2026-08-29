@@ -59,6 +59,11 @@ export class Unit extends Entity {
         this.empTarget = null;
         this.lastEmp = 0;
 
+        // Stealth detection (VOTE-017): for a def.stealth unit, true when a hostile
+        // sensor sees it this tick (Game.updateStealthDetection). Non-stealth units
+        // ignore this. Undetected stealth is untargetable + fog-hidden.
+        this.detected = false;
+
         // Supply this unit actually consumed at spawn. Starting-army units are
         // spawned without charging supply, so they must refund 0 on death; trained
         // units are set to their def.supply by the UNIT_SPAWNED handler. die()
@@ -851,7 +856,10 @@ export class Unit extends Entity {
         // one tick stale (accepted, imperceptible for target acquisition).
         const candidates = gameState.queryNearbyEntities(
             this.mesh.position.x, this.mesh.position.z, maxRange,
-            (ent) => !ent.dead && ent.team !== this.team && gameState.isHostile(this.team, ent.team)
+            // Skip undetected stealth units (VOTE-017): a stealth target is
+            // untargetable unless a hostile sensor has detected it this tick.
+            (ent) => !ent.dead && ent.team !== this.team && gameState.isHostile(this.team, ent.team) &&
+                !(ent.def && ent.def.stealth && !ent.detected)
         );
         for (const ent of candidates) {
             const dist = this.distanceTo(ent);
@@ -874,7 +882,8 @@ export class Unit extends Entity {
         const candidates = gameState.queryNearbyEntities(
             this.mesh.position.x, this.mesh.position.z, maxRange,
             (ent) => !ent.dead && ent.team !== this.team &&
-                gameState.isHostile(this.team, ent.team) && !this.attackTargets.includes(ent)
+                gameState.isHostile(this.team, ent.team) && !this.attackTargets.includes(ent) &&
+                !(ent.def && ent.def.stealth && !ent.detected)
         );
         const enemies = [];
         for (const ent of candidates) {
