@@ -318,3 +318,66 @@
             margin: 0 0 16px;
             min-height: 14px;
         }
+
+        /* Pause menu overlay */
+        .pause-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 8, 20, 0.72);
+        }
+
+        .pause-overlay.visible {
+            display: flex;
+        }
+
+        .pause-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 240px;
+            padding: 28px 32px;
+            background: rgba(4, 20, 40, 0.95);
+            border: 1px solid #0a6;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 170, 255, 0.25);
+        }
+
+        .pause-title {
+            margin: 0 0 10px;
+            text-align: center;
+            color: #0cf;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-size: 22px;
+        }
+
+        .pause-btn {
+            padding: 10px 16px;
+            background: rgba(0, 60, 110, 0.5);
+            color: #bdf;
+            border: 1px solid #0a6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 15px;
+            letter-spacing: 1px;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .pause-btn:hover {
+            background: rgba(0, 120, 200, 0.6);
+            color: #eff;
+        }
+
+        .pause-btn-quit {
+            border-color: #a33;
+            color: #f99;
+        }
+
+        .pause-btn-quit:hover {
+            background: rgba(150, 30, 30, 0.5);
+            color: #fff;
+        }
