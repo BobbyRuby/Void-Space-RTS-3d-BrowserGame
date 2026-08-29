@@ -1618,6 +1618,72 @@
             screen.material = screenMat;
         },
 
+        createForceFieldGenerator: function(parent, s, mats) {
+            // Hex base platform
+            const base = BABYLON.MeshBuilder.CreateCylinder('ffgBase', {
+                height: 2 * s, diameter: 8 * s, tessellation: 6
+            }, this.scene);
+            base.position.y = 1 * s;
+            base.parent = parent;
+            base.material = mats.structureMat;
+
+            // Three pylon legs
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                const leg = BABYLON.MeshBuilder.CreateCylinder('ffgLeg' + i, {
+                    height: 10 * s, diameterTop: 0.8 * s, diameterBottom: 1.2 * s, tessellation: 6
+                }, this.scene);
+                leg.position.set(Math.cos(angle) * 3 * s, 6 * s, Math.sin(angle) * 3 * s);
+                leg.parent = parent;
+                leg.material = mats.gratingMat;
+            }
+
+            // Central conduit
+            const conduit = BABYLON.MeshBuilder.CreateCylinder('ffgConduit', {
+                height: 12 * s, diameter: 1.5 * s, tessellation: 8
+            }, this.scene);
+            conduit.position.y = 7 * s;
+            conduit.parent = parent;
+            conduit.material = mats.techMat;
+
+            // Energy core sphere
+            const core = BABYLON.MeshBuilder.CreateSphere('ffgCore', {
+                diameter: 3 * s, segments: 12
+            }, this.scene);
+            core.position.y = 13 * s;
+            core.parent = parent;
+            const coreMat = mats.energyMat.clone('ffgCoreMat');
+            core.material = coreMat;
+
+            // Emitter ring
+            const ring = BABYLON.MeshBuilder.CreateTorus('ffgRing', {
+                diameter: 5 * s, thickness: 0.3 * s, tessellation: 24
+            }, this.scene);
+            ring.position.y = 13 * s;
+            ring.parent = parent;
+            ring.material = mats.glowMat;
+
+            // Shield dome (top hemisphere, translucent emissive)
+            const dome = BABYLON.MeshBuilder.CreateSphere('ffgDome', {
+                diameter: 12 * s, segments: 20, slice: 0.5
+            }, this.scene);
+            dome.position.y = 13 * s;
+            dome.parent = parent;
+            const domeMat = mats.glowMat.clone('ffgDomeMat');
+            domeMat.alpha = 0.22;
+            domeMat.backFaceCulling = false;
+            dome.material = domeMat;
+
+            // Animated shimmer, bound to the dome mesh's own observable so it
+            // disposes automatically with the mesh instead of leaking on the scene
+            dome.onBeforeRenderObservable.add(() => {
+                const t = performance.now() * 0.001;
+                domeMat.alpha = 0.18 + 0.10 * Math.sin(t * 1.5);
+                dome.rotation.y += 0.003;
+                coreMat.emissiveColor = mats.energyMat.emissiveColor.scale(0.8 + 0.2 * Math.sin(t * 2.5));
+            });
+        },
+
         // ===== MAIN CREATION METHOD =====
         createBuildingMesh: function(buildingType, size, color, team, parentMesh) {
             const [r, g, b] = color;
@@ -1631,7 +1697,8 @@
                 shipyard: size / 14,
                 advancedShipyard: size / 18,
                 turret: size / 5,
-                supplyDepot: size / 6
+                supplyDepot: size / 6,
+                forceFieldGenerator: size / 8
             };
             
             const s = scaleFactors[buildingType] || size / 8;
@@ -1657,6 +1724,9 @@
                     break;
                 case 'supplyDepot':
                     this.createSupplyDepot(parentMesh, s, mats);
+                    break;
+                case 'forceFieldGenerator':
+                    this.createForceFieldGenerator(parentMesh, s, mats);
                     break;
                 default:
                     console.warn('Unknown building type:', buildingType);
