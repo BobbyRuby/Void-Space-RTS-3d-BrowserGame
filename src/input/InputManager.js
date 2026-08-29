@@ -44,7 +44,6 @@ export class InputManager {
     }
 
     init(canvas) {
-        console.log('InputManager.init called with canvas:', canvas, canvas?.id);
         this.canvas = canvas;
 
         // Get selection box element (or create if missing)
@@ -62,7 +61,6 @@ export class InputManager {
                 box-shadow: 0 0 10px rgba(0, 170, 255, 0.5), inset 0 0 20px rgba(0, 170, 255, 0.1);
             `;
             document.body.appendChild(this.selectionBox);
-            console.log('InputManager: Created selection box element');
         }
 
         // Keyboard events - store bound handlers for cleanup
@@ -85,8 +83,6 @@ export class InputManager {
         canvas.addEventListener('pointerdown', this._onMouseDown, true);
         canvas.addEventListener('pointerup', this._onMouseUp, true);
         canvas.addEventListener('pointermove', this._onMouseMove, true);
-
-        console.log('InputManager: All event listeners attached to canvas');
 
         // Prevent default context menu
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -238,12 +234,10 @@ export class InputManager {
 
         const entity = sceneManager.pickEntity(e.clientX, e.clientY, gameState.entities);
         const worldPos = sceneManager.getWorldPosition(e.clientX, e.clientY);
-        console.log('onClick: worldPos=', worldPos, 'entity=', entity?.type);
 
         // Handle build mode
         if (gameState.buildMode) {
             if (worldPos) {
-                console.log('onClick: calling handleBuildModeClick at', worldPos);
                 this.handleBuildModeClick(worldPos);
             } else {
                 console.log('onClick: buildMode but worldPos is NULL - raycasting failed!');
@@ -532,26 +526,20 @@ export class InputManager {
     }
 
     onMouseDown(e) {
-        console.log('MouseDown ENTRY:', e.button, e.target.tagName, e.target.id, 'canvas?', e.target === this.canvas);
-
         // Only handle canvas clicks
         if (e.target.id !== 'renderCanvas') {
             return;
         }
 
-        console.log('MouseDown ENTRY:', e.button, e.target.id);
-
         if (e.button === 0) { // Left button
             // Don't start drag if in build mode (placing buildings)
             if (gameState.buildMode) {
-                console.log('MouseDown: in build mode, skipping drag');
                 return;
             }
 
             this.isDragging = true;
             this.dragStart = { x: e.clientX, y: e.clientY };
             this.dragEnd = { x: e.clientX, y: e.clientY };
-            console.log('MouseDown: drag started at', e.clientX, e.clientY, 'selectionBox:', !!this.selectionBox);
 
             eventBus.emit(GameEvents.INPUT_DRAG_START, {
                 screenX: e.clientX,
@@ -576,9 +564,6 @@ export class InputManager {
                 this.wasBoxSelect = true;  // Flag to prevent onClick from clearing selection
                 const startWorld = sceneManager.getWorldPosition(this.dragStart.x, this.dragStart.y);
                 const endWorld = sceneManager.getWorldPosition(this.dragEnd.x, this.dragEnd.y);
-
-                console.log('Drag end - screen coords:', this.dragStart, '->', this.dragEnd);
-                console.log('Drag end - world coords:', startWorld, '->', endWorld);
 
                 if (startWorld && endWorld) {
                     eventBus.emit(GameEvents.INPUT_DRAG_END, {
@@ -610,7 +595,6 @@ export class InputManager {
             const dy = Math.abs(this.dragEnd.y - this.dragStart.y);
 
             if (dx > 5 || dy > 5) {
-                console.log('MouseMove: updating selection box, dx:', dx, 'dy:', dy);
                 this.updateSelectionBox();
             }
         }
@@ -657,8 +641,6 @@ export class InputManager {
         const top = Math.min(this.dragStart.y, this.dragEnd.y);
         const width = Math.abs(this.dragEnd.x - this.dragStart.x);
         const height = Math.abs(this.dragEnd.y - this.dragStart.y);
-
-        console.log('updateSelectionBox:', left, top, width, height);
 
         this.selectionBox.style.left = left + 'px';
         this.selectionBox.style.top = top + 'px';
