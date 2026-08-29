@@ -63,6 +63,10 @@ class GameState {
         this.resources = {};
         this.stats = {};
         this.hostility = {};
+        // Per-team tech multipliers (Tech Lab, VOTE-017). damageMul scales a team's
+        // OUTGOING damage, armorMul divides its INCOMING damage; applied once in
+        // takeDamage. tier advances over time while a techLab is operational.
+        this.techLevel = {};
 
         // Initialize for all teams
         for (let t = 0; t <= 5; t++) {
@@ -85,6 +89,8 @@ class GameState {
                 buildingsLost: 0,
                 resourcesCollected: 0
             };
+
+            this.techLevel[t] = { tier: 0, damageMul: 1, armorMul: 1, progress: 0 };
 
             // Initialize hostility matrix
             this.hostility[t] = {};
@@ -285,6 +291,17 @@ class GameState {
                 delta: amount
             });
         }
+    }
+
+    // Apply per-team tech multipliers to a damage amount at resolution time
+    // (Tech Lab, VOTE-017). Attacker's damageMul scales UP, defender's armorMul
+    // scales DOWN. Guarded for missing/neutral teams (returns amount unchanged).
+    techDamage(amount, attackerTeam, defenderTeam) {
+        const atk = this.techLevel[attackerTeam];
+        if (atk && atk.damageMul) amount *= atk.damageMul;
+        const def = this.techLevel[defenderTeam];
+        if (def && def.armorMul) amount /= def.armorMul;
+        return amount;
     }
 
     canAfford(team, cost) {

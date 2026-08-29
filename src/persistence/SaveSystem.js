@@ -184,7 +184,11 @@ export class SaveSystem {
             aiState: this.serializeAIState(),
 
             // Statistics
-            stats: this.serializeStats()
+            stats: this.serializeStats(),
+
+            // Tech Lab per-team multipliers (VOTE-017) - without this a loaded
+            // game silently loses all researched tech.
+            techLevel: this.serializeTechLevel()
         };
 
         // Compress if enabled
@@ -296,6 +300,20 @@ export class SaveSystem {
         };
     }
 
+    serializeTechLevel() {
+        // gameState.techLevel is keyed PER TEAM (0-5) with {tier,damageMul,armorMul,progress}.
+        const tech = {};
+        for (const [team, t] of Object.entries(gameState.techLevel || {})) {
+            tech[team] = {
+                tier: t.tier || 0,
+                damageMul: t.damageMul || 1,
+                armorMul: t.armorMul || 1,
+                progress: t.progress || 0
+            };
+        }
+        return tech;
+    }
+
     serializeStats() {
         // gameState.stats is keyed PER TEAM (0-5); record methods do stats[team].X++.
         // Serialize the whole per-team structure with the real field names so load can
@@ -363,6 +381,17 @@ export class SaveSystem {
             for (const [team, s] of Object.entries(saveData.stats)) {
                 if (s && typeof s === 'object' && gameState.stats[team]) {
                     gameState.stats[team] = { ...gameState.stats[team], ...s };
+                }
+            }
+        }
+
+        // Restore Tech Lab per-team multipliers (VOTE-017), merging into the
+        // per-team structure GAME_RESET rebuilt. Older saves without techLevel
+        // just keep the reset defaults (tier 0, muls 1).
+        if (saveData.techLevel && typeof saveData.techLevel === 'object') {
+            for (const [team, t] of Object.entries(saveData.techLevel)) {
+                if (t && typeof t === 'object' && gameState.techLevel[team]) {
+                    gameState.techLevel[team] = { ...gameState.techLevel[team], ...t };
                 }
             }
         }

@@ -1016,6 +1016,10 @@ export class Unit extends Entity {
     }
 
     takeDamage(amount, attacker) {
+        // Tech Lab (VOTE-017): apply attacker damageMul + this-team armorMul once,
+        // before shield/health. attacker is a { team } or an entity; guarded.
+        amount = gameState.techDamage(amount, attacker && attacker.team, this.team);
+
         // Shield absorbs first
         if (this.shield > 0) {
             const shieldDamage = Math.min(this.shield, amount);

@@ -640,6 +640,23 @@ export class Building extends Entity {
             this.turretHead.rotation.y += dt * 0.5;
         }
 
+        // Tech Lab research (VOTE-017): advance this team's tech tier over time up
+        // to maxTier, raising the flat damage/armor multipliers read in takeDamage.
+        // Multiple labs share one team tier (more labs = faster), capped. Placeholders.
+        if (this.type === 'techLab' && !this.isConstructing) {
+            const tl = gameState.techLevel[this.team];
+            const maxTier = this.def.maxTier || 0;
+            if (tl && tl.tier < maxTier) {
+                tl.progress += dt;
+                if (tl.progress >= (this.def.researchTime || Infinity)) {
+                    tl.tier++;
+                    tl.progress = 0;
+                    tl.damageMul = 1 + tl.tier * (this.def.damageStep || 0);
+                    tl.armorMul = 1 + tl.tier * (this.def.armorStep || 0);
+                }
+            }
+        }
+
         // Force field generator animation
         if (this.type === 'forceFieldGenerator' && !this.isConstructing) {
             const time = performance.now() * 0.001;
@@ -854,6 +871,8 @@ export class Building extends Entity {
     }
 
     takeDamage(amount, attacker) {
+        // Tech Lab (VOTE-017): apply attacker damageMul + this-team armorMul once.
+        amount = gameState.techDamage(amount, attacker && attacker.team, this.team);
         this.health -= amount;
 
         // Provoke neutrals when attacked

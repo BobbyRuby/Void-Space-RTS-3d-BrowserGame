@@ -376,6 +376,25 @@ export const BUILDINGS = {
         sensorRange: 200,
         color: [0.3, 0.7, 0.7]
     },
+    techLab: {
+        // S1 Tech/Upgrade Lab (VOTE-017): while operational it advances its team's
+        // tech tier every researchTime seconds up to maxTier, raising a flat
+        // per-team damage/armor multiplier applied in takeDamage (Game/GameState).
+        // Building it costs the credits+time; that IS the research investment.
+        // All numbers are PLACEHOLDERS (CEO tunes).
+        name: 'Tech Lab',
+        icon: '🔬',
+        size: 8,
+        maxHealth: 900,
+        cost: 400,
+        energyDrain: 8,
+        buildTime: 30,
+        maxTier: 3,
+        researchTime: 30,   // seconds per tier
+        damageStep: 0.15,   // +15% outgoing damage per tier
+        armorStep: 0.10,    // +10% effective armor per tier
+        color: [0.4, 0.8, 0.6]
+    },
     forceFieldGenerator: {
         name: 'Force Field Generator',
         icon: '🛡️',
