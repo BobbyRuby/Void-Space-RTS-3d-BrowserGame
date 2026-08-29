@@ -472,9 +472,13 @@ export class ForceFieldSystem {
                 continue;
             }
 
-            // Power check - disable field if team has power shortage
+            // Power check - disable field if team has power shortage OR either
+            // generator is EMP-disabled (Unit.updateEmpSkirmisher sets disabledUntil).
             const hasPower = teamPowered[segment.team];
-            segment.powerDisabled = !hasPower;
+            const emped =
+                (segment.generatorA && now < (segment.generatorA.disabledUntil || 0)) ||
+                (segment.generatorB && now < (segment.generatorB.disabledUntil || 0));
+            segment.powerDisabled = !hasPower || emped;
 
             if (segment.powerDisabled) {
                 // Visual: dim and flicker when unpowered

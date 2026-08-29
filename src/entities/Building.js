@@ -47,6 +47,11 @@ export class Building extends Entity {
         this.lastFire = 0;
         this.turretHead = null;
 
+        // EMP disable: while performance.now() < disabledUntil this structure is
+        // inert (turret cannot fire, force-field segments drop). Set by an EMP
+        // Skirmisher pulse (Unit.updateEmpSkirmisher). 0 = never disabled.
+        this.disabledUntil = 0;
+
         // Alien building flag
         this.isAlien = false;
 
@@ -609,8 +614,8 @@ export class Building extends Entity {
             }
         }
 
-        // Turret combat
-        if (this.type === 'turret' && !this.isConstructing) {
+        // Turret combat (EMP-silenced while disabledUntil is in the future)
+        if (this.type === 'turret' && !this.isConstructing && performance.now() >= this.disabledUntil) {
             const target = this.findTarget();
             if (target && target.mesh) {
                 // Rotate turret to face target (if turretHead exists)

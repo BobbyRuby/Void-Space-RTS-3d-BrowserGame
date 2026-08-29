@@ -55,6 +55,10 @@ export class Unit extends Entity {
         // Repair drone (support unit) - the friendly unit currently being healed
         this.repairTarget = null;
 
+        // EMP skirmisher (disable/utility) - structure being pulsed + pulse cooldown
+        this.empTarget = null;
+        this.lastEmp = 0;
+
         // Supply this unit actually consumed at spawn. Starting-army units are
         // spawned without charging supply, so they must refund 0 on death; trained
         // units are set to their def.supply by the UNIT_SPAWNED handler. die()
@@ -331,6 +335,12 @@ export class Unit extends Entity {
         // Repair-drone logic (support unit - heals friendly units, no weapon)
         if (this.type === 'repairDrone') {
             this.updateRepairDrone(dt);
+            return;
+        }
+
+        // EMP-skirmisher logic (disable/utility - silences turrets, drops force fields)
+        if (this.type === 'empSkirmisher') {
+            this.updateEmpSkirmisher(dt);
             return;
         }
 
@@ -629,6 +639,65 @@ export class Unit extends Entity {
         if (!target || target === this || target.team !== this.team) return;
         this.repairTarget = target;
         this.command = 'repair';
+    }
+
+    updateEmpSkirmisher(dt) {
+        const range = this.def.empRange || 60;
+
+        // Drop an invalid target (gone, dead, mesh-less, or no longer disableable)
+        if (this.empTarget &&
+            (this.empTarget.dead || !this.empTarget.mesh || !this.isEmpTargetable(this.empTarget))) {
+            this.empTarget = null;
+        }
+
+        // Auto-acquire nearest hostile turret / force-field generator
+        if (!this.empTarget) {
+            this.empTarget = this.findEmpTarget();
+        }
+
+        if (this.empTarget && this.empTarget.mesh) {
+            const dist = this.distanceTo(this.empTarget);
+            if (dist > range) {
+                this.command = 'move';
+                this.moveToward(this.empTarget.mesh.position.x, this.empTarget.mesh.position.z, dt);
+            } else {
+                this.command = 'attack';
+                const now = performance.now();
+                if (now - this.lastEmp > (this.def.empCooldown || 5000)) {
+                    // Pulse: disable the structure for empDuration seconds
+                    this.empTarget.disabledUntil = now + (this.def.empDuration || 6) * 1000;
+                    this.lastEmp = now;
+                }
+            }
+            return;
+        }
+
+        // Nothing to disable - follow any standing move order, else idle
+        this.command = 'idle';
+        this.updateMovement(dt);
+    }
+
+    isEmpTargetable(ent) {
+        return !!ent &&
+            (ent.type === 'turret' || ent.type === 'forceFieldGenerator') &&
+            gameState.isHostile(this.team, ent.team);
+    }
+
+    findEmpTarget() {
+        let closest = null;
+        let closestDist = (this.def.empRange || 60) * 1.5;
+
+        for (const ent of gameState.buildings) {
+            if (ent.dead || !ent.mesh) continue;
+            if (!this.isEmpTargetable(ent)) continue;
+
+            const dist = this.distanceTo(ent);
+            if (dist < closestDist) {
+                closest = ent;
+                closestDist = dist;
+            }
+        }
+        return closest;
     }
 
     updateMovement(dt) {

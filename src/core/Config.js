@@ -276,7 +276,7 @@ export const BUILDINGS = {
         cost: 350,
         energyDrain: 5,
         buildTime: 30,
-        canBuild: ['interceptor', 'striker', 'heavy', 'bomber', 'gunship'],
+        canBuild: ['interceptor', 'striker', 'heavy', 'bomber', 'gunship', 'empSkirmisher'],
         color: [0.3, 0.5, 0.7]
     },
     advancedShipyard: {
@@ -376,6 +376,26 @@ export const UNITS = {
         repairRate: 40,
         repairRange: 40,
         color: [0.3, 0.9, 0.5]
+    },
+    empSkirmisher: {
+        // U5 EMP Skirmisher (VOTE-016): net-new disable/utility unit. No weapon.
+        // Auto-acquires nearest hostile turret or force-field generator within
+        // empRange, moves in, and pulses it: sets target.disabledUntil = now +
+        // empDuration s (turret silenced, FF segments drop) on an empCooldown ms
+        // timer. Behavior in Unit.updateEmpSkirmisher. Balance = placeholders.
+        name: 'EMP Skirmisher',
+        icon: '🌀',
+        size: 3,
+        maxHealth: 90,
+        shield: 20,
+        speed: 34,
+        cost: 200,
+        supply: 2,
+        buildTime: 16,
+        empRange: 60,
+        empDuration: 6,
+        empCooldown: 5000,
+        color: [0.5, 0.4, 0.9]
     },
     scout: {
         name: 'Scout',
