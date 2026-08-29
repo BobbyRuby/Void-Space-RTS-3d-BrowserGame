@@ -84,13 +84,28 @@
 
     <!-- Game Over Screen -->
     <div id="gameOverScreen">
-        <h1 id="resultTitle">VICTORY!</h1>
-        <div class="final-stats">
-            <div>Units Built: <span id="finalBuilt">0</span></div>
-            <div>Units Lost: <span id="finalLost">0</span></div>
-            <div>Enemy Destroyed: <span id="finalKills">0</span></div>
+        <div class="gameover-panel">
+            <h1 id="resultTitle">VICTORY!</h1>
+            <div class="gameover-divider"></div>
+            <div class="final-stats">
+                <div class="stat-cell">
+                    <span class="stat-icon">🚀</span>
+                    <span class="stat-value" id="finalBuilt">0</span>
+                    <span class="stat-label">Units Built</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-icon">💥</span>
+                    <span class="stat-value" id="finalLost">0</span>
+                    <span class="stat-label">Units Lost</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-icon">☠️</span>
+                    <span class="stat-value" id="finalKills">0</span>
+                    <span class="stat-label">Enemy Destroyed</span>
+                </div>
+            </div>
+            <button class="restart-btn" id="playAgainBtn">PLAY AGAIN</button>
         </div>
-        <button class="restart-btn" id="playAgainBtn">PLAY AGAIN</button>
     </div>
 
     <!-- Loading Screen -->
