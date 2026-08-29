@@ -297,13 +297,21 @@ export class SaveSystem {
     }
 
     serializeStats() {
-        return {
-            unitsBuilt: gameState.stats?.unitsBuilt || 0,
-            unitsLost: gameState.stats?.unitsLost || 0,
-            unitsKilled: gameState.stats?.unitsKilled || 0,
-            buildingsBuilt: gameState.stats?.buildingsBuilt || 0,
-            resourcesGathered: gameState.stats?.resourcesGathered || 0
-        };
+        // gameState.stats is keyed PER TEAM (0-5); record methods do stats[team].X++.
+        // Serialize the whole per-team structure with the real field names so load can
+        // restore the exact shape (a flat object would crash on the first death).
+        const stats = {};
+        for (const [team, s] of Object.entries(gameState.stats || {})) {
+            stats[team] = {
+                unitsBuilt: s.unitsBuilt || 0,
+                unitsLost: s.unitsLost || 0,
+                enemyKilled: s.enemyKilled || 0,
+                buildingsBuilt: s.buildingsBuilt || 0,
+                buildingsLost: s.buildingsLost || 0,
+                resourcesCollected: s.resourcesCollected || 0
+            };
+        }
+        return stats;
     }
 
     // ===== Save Data Application =====
@@ -318,7 +326,9 @@ export class SaveSystem {
         // Clear existing state
         eventBus.emit(GameEvents.GAME_RESET);
 
-        // Restore game time
+        // Restore game time. GAME_RESET set running=false; a loaded game is in progress,
+        // so re-arm it or Game.update() early-returns on !running and the sim stays frozen.
+        gameState.running = true;
         gameState.gameTime = saveData.gameTime;
         gameState.isPaused = saveData.isPaused;
         gameState.gameSpeed = saveData.gameSpeed;
@@ -345,8 +355,17 @@ export class SaveSystem {
             eventBus.emit(GameEvents.RESTORE_ENTITY, entityData);
         }
 
-        // Restore stats
-        gameState.stats = saveData.stats;
+        // Restore stats per-team, merging into the per-team structure GAME_RESET just
+        // rebuilt. Guard against old flat-format saves (non-object team values) - assigning
+        // a flat object over gameState.stats would leave stats[team] undefined and crash
+        // recordUnitLost/recordBuildingLost on the first death.
+        if (saveData.stats && typeof saveData.stats === 'object') {
+            for (const [team, s] of Object.entries(saveData.stats)) {
+                if (s && typeof s === 'object' && gameState.stats[team]) {
+                    gameState.stats[team] = { ...gameState.stats[team], ...s };
+                }
+            }
+        }
 
         // Restore explored fog
         if (saveData.explored) {
