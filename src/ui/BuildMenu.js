@@ -337,6 +337,7 @@ export class BuildMenu {
             { type: 'supplyDepot', icon: '📦', name: 'Supply Depot', desc: 'Increases unit capacity' },
             { type: 'shipyard', icon: '🚀', name: 'Shipyard', desc: 'Produces basic combat units' },
             { type: 'advancedShipyard', icon: '🛸', name: 'Adv. Shipyard', desc: 'Produces advanced warships' },
+            { type: 'techLab', icon: '🔬', name: 'Tech Lab', desc: 'Researches team damage + armor upgrades over time' },
             { type: 'turret', icon: '🔫', name: 'Turret', desc: 'Defensive weapon platform' },
             { type: 'teslaTurret', icon: '⚡', name: 'Tesla Turret', desc: 'Rapid-fire short-range anti-swarm' },
             { type: 'sniperTurret', icon: '🎯', name: 'Sniper Turret', desc: 'Long-range high-damage cannon' },
