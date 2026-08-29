@@ -316,7 +316,7 @@ export const BUILDINGS = {
         energyDrain: 8,
         buildTime: 25,
         maxRange: 100,        // Max distance to connect to another generator
-        fieldHealth: 2000,    // Health of field segment between generators
+        fieldHealth: 10000,    // Health of field segment between generators (CEO 2026-08-29: 5x, barrier must actually hold)
         fieldWidth: 4,        // Width of field segment for collision
         fieldRegen: 5,        // HP/s regeneration when not taking damage
         fieldRegenDelay: 10,  // Seconds before regeneration after damage
