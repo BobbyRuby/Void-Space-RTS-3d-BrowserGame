@@ -845,8 +845,12 @@ export class Game {
         const scene = this.scene;
         if (!scene) return;
 
-        // Escalate: more enemies each wave (placeholders, CEO tunes).
-        const count = 4 + Math.floor(n * 2);
+        // Escalate: more enemies each wave, but CAP the per-wave count so late
+        // waves cannot grow unbounded (addresses the runaway-scaling flag). The
+        // ceiling is a TUNABLE PLACEHOLDER - the CEO owns the real value/curve;
+        // this only guarantees a bound exists. Set very high or remove to disable.
+        const WAVE_ENEMY_CAP = 40; // placeholder ceiling, CEO-tunable
+        const count = Math.min(4 + Math.floor(n * 2), WAVE_ENEMY_CAP);
 
         // March target = the player's command center (fallback: any player building).
         const base =
