@@ -26,6 +26,10 @@ export class SceneManager {
         this.asteroidMasterMesh = null;
         this.asteroidMatrices = null;  // Float32Array for thin instance transforms
         this.asteroidData = [];        // Orbital/rotation data for each asteroid
+
+        // Background depth layer meshes
+        this.farStarMasterMesh = null;
+        this.nebulaMesh = null;
     }
 
     init(canvasElement) {
@@ -65,6 +69,8 @@ export class SceneManager {
 
         // Create world elements
         this.createStarfield();
+        this.createFarStars();
+        this.createNebula();
         this.createAsteroidBelt();
 
         // Handle window resize
@@ -213,6 +219,156 @@ export class SceneManager {
         this.starfieldMasterMesh = masterStar;
 
         console.log(`SceneManager: Created starfield with ${starCount} thin instances (1 draw call)`);
+    }
+
+    /**
+     * Create a far parallax star layer, behind the main starfield, for background depth.
+     * Same thin-instance pattern as createStarfield (1 mesh, 1 material, 1 draw call).
+     * Deliberately larger radius, smaller scale and fainter color than the near layer
+     * so it can never wash out the scene.
+     */
+    createFarStars() {
+        const starCount = 1600;
+
+        // Create ONE master far-star mesh, separate from the near starfield master
+        const masterFarStar = BABYLON.MeshBuilder.CreateSphere('farStarMaster', {
+            diameter: 1,
+            segments: 4  // Low poly for performance
+        }, this.scene);
+
+        const farStarMat = new BABYLON.StandardMaterial('farStarMat', this.scene);
+        farStarMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        farStarMat.disableLighting = true;
+        farStarMat.freeze();  // Optimize: prevent material changes
+        masterFarStar.material = farStarMat;
+        masterFarStar.isPickable = false;
+        masterFarStar.doNotSyncBoundingInfo = true;
+
+        const matrices = new Float32Array(starCount * 16);
+        const colors = new Float32Array(starCount * 4);
+
+        for (let i = 0; i < starCount; i++) {
+            // Larger radius than the near starfield (roughly 1.6x-2x of its 800-1000 range)
+            const radius = 1300 + Math.random() * 500;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+
+            const x = radius * Math.sin(phi) * Math.cos(theta);
+            const y = radius * Math.sin(phi) * Math.sin(theta);
+            const z = radius * Math.cos(phi);
+
+            // Roughly half the near layer's scale (0.5 - 2.0)
+            const scale = 0.25 + Math.random() * 0.75;
+
+            const matrix = BABYLON.Matrix.Compose(
+                new BABYLON.Vector3(scale, scale, scale),
+                BABYLON.Quaternion.Identity(),
+                new BABYLON.Vector3(x, y, z)
+            );
+
+            matrix.copyToArray(matrices, i * 16);
+
+            // Fainter than the near layer: brightness scaled to ~0.4 of near-star brightness
+            const nearBrightness = 0.5 + Math.random() * 0.5;
+            const faintFactor = 0.35 + Math.random() * 0.15; // 0.35 - 0.5
+            const brightness = nearBrightness * faintFactor;
+            const colorChoice = Math.random();
+            let r, g, b;
+
+            if (colorChoice < 0.7) {
+                r = brightness;
+                g = brightness;
+                b = brightness;
+            } else if (colorChoice < 0.85) {
+                r = brightness;
+                g = brightness * 0.8;
+                b = brightness * 0.6;
+            } else {
+                r = brightness * 0.7;
+                g = brightness * 0.8;
+                b = brightness;
+            }
+
+            colors[i * 4] = r;
+            colors[i * 4 + 1] = g;
+            colors[i * 4 + 2] = b;
+            colors[i * 4 + 3] = 1.0;
+        }
+
+        masterFarStar.thinInstanceSetBuffer('matrix', matrices, 16);
+        masterFarStar.thinInstanceSetBuffer('color', colors, 4);
+
+        masterFarStar.freezeWorldMatrix();
+
+        this.farStarMasterMesh = masterFarStar;
+
+        console.log(`SceneManager: Created far star layer with ${starCount} thin instances (1 draw call)`);
+    }
+
+    /**
+     * Create a subtle nebula backdrop: one large inward-facing sphere with a soft,
+     * low-alpha procedural texture. Pure background ambience, skipped at LOW quality.
+     * Alpha is fixed low and the sphere sits far behind gameplay, so it cannot wash
+     * out the scene.
+     */
+    createNebula() {
+        if (graphicsLevel === 'LOW') {
+            console.log('SceneManager: Skipping nebula backdrop at LOW graphics quality');
+            return;
+        }
+
+        // Sits behind the far star layer (radius ~1300-1800)
+        const nebulaSphere = BABYLON.MeshBuilder.CreateSphere('nebulaBackdrop', {
+            diameter: 3600,
+            segments: 8
+        }, this.scene);
+
+        const texSize = 512;
+        const nebulaTexture = new BABYLON.DynamicTexture('nebulaTexture', texSize, this.scene, false);
+        const ctx = nebulaTexture.getContext();
+
+        // Base fill matches the scene clear color so unpainted areas blend in
+        ctx.fillStyle = 'rgb(5, 5, 13)';
+        ctx.fillRect(0, 0, texSize, texSize);
+
+        // Soften the blobs so nothing reads as a sharp shape
+        ctx.filter = 'blur(24px)';
+
+        const blobs = [
+            { x: 120, y: 150, r: 180, color: 'rgba(70, 30, 90, 0.28)' },   // deep purple
+            { x: 380, y: 320, r: 160, color: 'rgba(25, 40, 100, 0.24)' }, // deep blue
+            { x: 260, y: 420, r: 200, color: 'rgba(90, 30, 70, 0.20)' },  // faint magenta
+            { x: 440, y: 110, r: 100, color: 'rgba(25, 40, 100, 0.24)' }  // deep blue accent
+        ];
+
+        for (const blob of blobs) {
+            const gradient = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.r);
+            gradient.addColorStop(0, blob.color);
+            gradient.addColorStop(1, 'rgba(5, 5, 13, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, texSize, texSize);
+        }
+
+        ctx.filter = 'none';
+        nebulaTexture.update();
+
+        const nebulaMat = new BABYLON.StandardMaterial('nebulaMat', this.scene);
+        nebulaMat.disableLighting = true;
+        nebulaMat.emissiveTexture = nebulaTexture;
+        nebulaMat.backFaceCulling = false; // seen from inside the sphere
+        nebulaMat.alpha = 0.18; // fixed low, do not raise
+        nebulaMat.freeze();
+
+        nebulaSphere.material = nebulaMat;
+        nebulaSphere.isPickable = false;
+        nebulaSphere.doNotSyncBoundingInfo = true;
+        nebulaSphere.renderingGroupId = 0; // draws behind gameplay
+        nebulaSphere.infiniteDistance = true;
+        nebulaSphere.freezeWorldMatrix();
+
+        this.nebulaMesh = nebulaSphere;
+
+        console.log('SceneManager: Created subtle nebula backdrop');
     }
 
     /**
@@ -567,6 +723,18 @@ export class SceneManager {
         if (this.starfieldMasterMesh) {
             this.starfieldMasterMesh.dispose();
             this.starfieldMasterMesh = null;
+        }
+
+        // Dispose far star layer thin instances
+        if (this.farStarMasterMesh) {
+            this.farStarMasterMesh.dispose();
+            this.farStarMasterMesh = null;
+        }
+
+        // Dispose nebula backdrop
+        if (this.nebulaMesh) {
+            this.nebulaMesh.dispose();
+            this.nebulaMesh = null;
         }
 
         // Dispose asteroid thin instances
