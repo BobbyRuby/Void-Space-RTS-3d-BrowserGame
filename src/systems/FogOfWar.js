@@ -326,6 +326,11 @@ export class FogOfWar {
     updateEntityVisibility() {
         if (!this.enabled) return;
 
+        // A fog toggle (setEnabled) force-enables every mesh outside this pass, so
+        // the cached _fogEnabled below goes stale; forceRefresh re-applies once.
+        const forceRefresh = this._visibilityCacheDirty === true;
+        this._visibilityCacheDirty = false;
+
         for (const entity of gameState.entities) {
             if (entity.dead || !entity.mesh) continue;
 
@@ -338,9 +343,17 @@ export class FogOfWar {
                 visible = false;
             }
 
-            // Update entity mesh visibility
+            // Update entity mesh visibility. Fog is the SOLE owner of enemy-mesh
+            // enabled state (grep: no other setEnabled touches a unit/building mesh),
+            // so cache the last applied value and skip the redundant setEnabled when
+            // it has not changed - setEnabled propagates to children on every call.
+            // (Ore/crystal below are NOT cached: their enabled state is co-owned by
+            // the harvest + resource systems, so a cache there would desync.)
             if (entity.team !== TEAMS.PLAYER) {
-                entity.mesh.setEnabled(visible);
+                if (forceRefresh || entity._fogEnabled !== visible) {
+                    entity.mesh.setEnabled(visible);
+                    entity._fogEnabled = visible;
+                }
             }
         }
 
@@ -381,6 +394,9 @@ export class FogOfWar {
 
     setEnabled(enabled) {
         this.enabled = enabled;
+        // This path force-enables meshes outside updateEntityVisibility, staling
+        // the per-entity _fogEnabled cache; flag a one-time re-apply on the next pass.
+        this._visibilityCacheDirty = true;
         if (this.fogMesh) {
             this.fogMesh.setEnabled(enabled);
         }
