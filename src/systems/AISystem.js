@@ -6,6 +6,7 @@
 import { BUILDINGS, UNITS, CONFIG } from '../core/Config.js?v=20260119';
 import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 import { gameState } from '../core/GameState.js?v=20260119';
+import { getSeededRandom } from '../core/SeededRandom.js?v=20260119';
 
 class AIPlayer {
     constructor(team) {
@@ -56,14 +57,14 @@ class AIPlayer {
                 this.aggressionLevel = 0.2;
                 this.buildSpeedMultiplier = 0.7;
                 this.maxHarvesters = 4;
-                this.actionInterval = 2500 + Math.random() * 1500; // Slower decisions
+                this.actionInterval = 2500 + getSeededRandom().next() * 1500; // Slower decisions
                 break;
             case 'hard':
                 this.minAttackForce = 10;
                 this.aggressionLevel = 0.6;
                 this.buildSpeedMultiplier = 1.3;
                 this.maxHarvesters = 8;
-                this.actionInterval = 1500 + Math.random() * 500; // Faster decisions
+                this.actionInterval = 1500 + getSeededRandom().next() * 500; // Faster decisions
                 break;
             case 'normal':
             default:
@@ -71,7 +72,7 @@ class AIPlayer {
                 this.aggressionLevel = 0.4;
                 this.buildSpeedMultiplier = 1.0;
                 this.maxHarvesters = 6;
-                this.actionInterval = 2000 + Math.random() * 1000;
+                this.actionInterval = 2000 + getSeededRandom().next() * 1000;
                 break;
         }
     }
@@ -142,8 +143,8 @@ class AIPlayer {
         const buildingDef = BUILDINGS[buildingType];
 
         if (res.credits >= buildingDef.cost) {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 30 + Math.random() * 20;
+            const angle = getSeededRandom().next() * Math.PI * 2;
+            const dist = 30 + getSeededRandom().next() * 20;
             const x = cc.mesh.position.x + Math.cos(angle) * dist;
             const z = cc.mesh.position.z + Math.sin(angle) * dist;
 
@@ -189,10 +190,10 @@ class AIPlayer {
             } else if (res.credits < 500) {
                 // Medium resources - strikers and interceptors
                 const midUnits = ['interceptor', 'striker', 'heavy'];
-                selectedUnit = midUnits[Math.floor(Math.random() * midUnits.length)];
+                selectedUnit = midUnits[Math.floor(getSeededRandom().next() * midUnits.length)];
             } else {
                 // High resources - any unit type
-                selectedUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
+                selectedUnit = unitTypes[Math.floor(getSeededRandom().next() * unitTypes.length)];
             }
             shipyard.queueUnit(selectedUnit);
         }
@@ -207,7 +208,7 @@ class AIPlayer {
             if (res.credits > 2000) {
                 capitalTypes.push('dreadnought');
             }
-            const selectedCapital = capitalTypes[Math.floor(Math.random() * capitalTypes.length)];
+            const selectedCapital = capitalTypes[Math.floor(getSeededRandom().next() * capitalTypes.length)];
             advShipyard.queueUnit(selectedCapital);
         }
 
@@ -291,7 +292,7 @@ class AIPlayer {
 
         // Only attack when we have built up a proper force (difficulty-based threshold)
         // AND the aggression check passes
-        if (militaryUnits.length >= this.minAttackForce && Math.random() < this.aggressionLevel) {
+        if (militaryUnits.length >= this.minAttackForce && getSeededRandom().next() < this.aggressionLevel) {
             // Use cached hostile entities
             const targets = this.getCached(
                 'hostileEntities',
@@ -313,16 +314,16 @@ class AIPlayer {
 
                 if (productionBuildings.length > 0) {
                     // Attack enemy production first
-                    target = productionBuildings[Math.floor(Math.random() * productionBuildings.length)];
-                } else if (units.length > 0 && Math.random() < 0.6) {
+                    target = productionBuildings[Math.floor(getSeededRandom().next() * productionBuildings.length)];
+                } else if (units.length > 0 && getSeededRandom().next() < 0.6) {
                     // 60% chance to attack enemy military
-                    target = units[Math.floor(Math.random() * units.length)];
+                    target = units[Math.floor(getSeededRandom().next() * units.length)];
                 } else if (buildings.length > 0) {
                     // Attack any enemy building
-                    target = buildings[Math.floor(Math.random() * buildings.length)];
+                    target = buildings[Math.floor(getSeededRandom().next() * buildings.length)];
                 } else {
                     // Fall back to any target
-                    target = targets[Math.floor(Math.random() * targets.length)];
+                    target = targets[Math.floor(getSeededRandom().next() * targets.length)];
                 }
 
                 eventBus.emit(GameEvents.AI_ATTACK, {

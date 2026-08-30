@@ -471,8 +471,8 @@ export class Game {
             const team = TEAMS.NEUTRAL + i;
 
             // Place alien bases near crystal fields or in strategic locations
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 300 + Math.random() * 50;
+            const angle = getSeededRandom().next() * Math.PI * 2;
+            const dist = 300 + getSeededRandom().next() * 50;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
 
@@ -931,7 +931,7 @@ export class Game {
 
         const edge = (CONFIG.MAP_SIZE || 1200) * 0.45;
         for (let i = 0; i < count; i++) {
-            const angle = Math.random() * Math.PI * 2;
+            const angle = getSeededRandom().next() * Math.PI * 2;
             const ex = Math.cos(angle) * edge;
             const ez = Math.sin(angle) * edge;
             const type = (i % 4 === 0) ? 'sentinel' : 'guardian';
