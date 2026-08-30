@@ -326,10 +326,21 @@ export class SceneManager {
 
             // Mark child meshes as not pickable
             asteroidMesh.getChildMeshes().forEach(m => m.isPickable = false);
+            // Decorative belt: never picked or collided, so skip the per-frame
+            // bounding-info sync on the mesh and its children (cull-cost only, no
+            // visual change).
+            asteroidMesh.doNotSyncBoundingInfo = true;
+            asteroidMesh.getChildMeshes().forEach(m => { m.doNotSyncBoundingInfo = true; });
 
             this.asteroids.push({
                 mesh: asteroidMesh,
                 size: size,
+                // Store the orbit angle/radius so updateAsteroids advances the angle
+                // directly, instead of recovering angle+radius from position via
+                // atan2+hypot every frame (~200 of each). Behavior-identical: the
+                // position is still cos/sin(angle) * radius, and orbit preserves radius.
+                angle: angle,
+                radius: radius,
                 rotSpeed: new BABYLON.Vector3(
                     (Math.random() - 0.5) * 0.01,
                     (Math.random() - 0.5) * 0.01,
@@ -398,13 +409,12 @@ export class SceneManager {
             asteroid.mesh.rotation.y += asteroid.rotSpeed.y;
             asteroid.mesh.rotation.z += asteroid.rotSpeed.z;
 
-            // Orbital movement (very slow)
-            const currentAngle = Math.atan2(asteroid.mesh.position.z, asteroid.mesh.position.x);
-            const radius = Math.hypot(asteroid.mesh.position.x, asteroid.mesh.position.z);
-            const newAngle = currentAngle + asteroid.orbitSpeed;
-
-            asteroid.mesh.position.x = Math.cos(newAngle) * radius;
-            asteroid.mesh.position.z = Math.sin(newAngle) * radius;
+            // Orbital movement (very slow). Advance the stored angle directly; the
+            // previous code recovered angle+radius from position with atan2+hypot
+            // every frame. Behavior-identical motion, minus that per-asteroid trig.
+            asteroid.angle += asteroid.orbitSpeed;
+            asteroid.mesh.position.x = Math.cos(asteroid.angle) * asteroid.radius;
+            asteroid.mesh.position.z = Math.sin(asteroid.angle) * asteroid.radius;
         }
     }
 
