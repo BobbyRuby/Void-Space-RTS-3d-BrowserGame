@@ -55,8 +55,13 @@ export class Game {
             console.log('Lobby config applied to game');
         }
 
-        // Initialize seeded random number generator
-        const seed = CONFIG.MAP_SEED || String(Date.now());
+        // Initialize seeded random number generator. A dev-only ?seed= URL param
+        // lets a determinism harness pin the seed for reproducible two-run tests.
+        let seed = CONFIG.MAP_SEED || String(Date.now());
+        if (typeof window !== 'undefined' && window.location && window.location.search) {
+            const _sp = new URLSearchParams(window.location.search);
+            if (_sp.get('seed')) seed = _sp.get('seed');
+        }
         this.rng = resetSeededRandom(seed);
         console.log('Map seed:', seed);
 
@@ -141,7 +146,50 @@ export class Game {
         this.updateLoadingProgress(100, 'Ready!');
         this.initialized = true;
 
+        // Dev-only determinism/debug surface (VOTE-022). No-op without ?debug.
+        this.exposeDebugHooks();
+
         return this;
+    }
+
+    // Dev-only determinism hook (VOTE-022): behind ?debug it exposes window.__void
+    // = { game, gameState, stepFixed(n), hashState() } so a harness can step the sim
+    // headlessly and hash full-game state - closes the empirical two-run determinism
+    // gap and fixes the module-scope wall that froze in-tab smokes. NO ?debug = no
+    // global surface (nothing exposed in normal play).
+    exposeDebugHooks() {
+        if (typeof window === 'undefined' || !window.location) return;
+        const params = new URLSearchParams(window.location.search || '');
+        if (!params.has('debug')) return;
+
+        window.__void = {
+            game: this,
+            gameState,
+            // Advance the sim n fixed sub-steps headlessly (no render), for a
+            // deterministic scripted run. dt defaults to the fixed timestep.
+            stepFixed: (n = 60, dt = (CONFIG.FIXED_DT || 1 / 60)) => {
+                for (let i = 0; i < n; i++) this.fixedStep(dt);
+            },
+            // Stable hash of the sim state determinism affects: entities sorted by id
+            // (type/team/position rounded to kill float print-noise/health) + per-team
+            // resources. Two runs from the same seed must return an identical hash.
+            hashState: () => {
+                let s = '';
+                const ents = gameState.entities.slice().sort((a, b) => (a.id || 0) - (b.id || 0));
+                for (const e of ents) {
+                    if (!e.mesh) continue;
+                    s += `${e.type}:${e.team}:${Math.round(e.mesh.position.x * 100)}:${Math.round(e.mesh.position.z * 100)}:${Math.round((e.health || 0) * 10)};`;
+                }
+                for (let t = 0; t <= 5; t++) {
+                    const r = gameState.resources[t];
+                    if (r) s += `R${t}:${Math.round(r.credits)}:${Math.round(r.ore)}:${Math.round(r.crystals)};`;
+                }
+                let h = 5381;
+                for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+                return { hash: h >>> 0, entities: ents.length, len: s.length };
+            }
+        };
+        console.log('[void debug] window.__void ready (stepFixed, hashState); seed pinned via ?seed=');
     }
 
     updateLoadingProgress(progress, text) {
