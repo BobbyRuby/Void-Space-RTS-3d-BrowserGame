@@ -643,9 +643,32 @@ export class Game {
         });
     }
 
-    update(dt) {
+    update(realDt) {
         if (!gameState.running || gameState.paused) return;
 
+        // Fixed-timestep accumulator (VOTE-018): step the SIM at a fixed dt so it is
+        // decoupled from render frame rate + deterministic; render/IO runs once per
+        // frame. At 60Hz this is exactly ONE step = behavior-identical to the old
+        // variable-dt loop (dt-linear movement is aggregate-equivalent). MAX_STEPS
+        // clamps a lag spike so a stalled frame cannot run away (no spiral-of-death).
+        // FIXED_DT is the felt tick rate - changing it off 1/60 is a board vote.
+        const FIXED = CONFIG.FIXED_DT || (1 / 60);
+        const MAX = CONFIG.MAX_STEPS || 5;
+        this._accumulator = (this._accumulator || 0) + realDt;
+        let steps = 0;
+        while (this._accumulator >= FIXED && steps < MAX) {
+            this.fixedStep(FIXED);
+            this._accumulator -= FIXED;
+            steps++;
+        }
+        if (steps >= MAX) this._accumulator = 0; // drop the backlog after a stall
+
+        this.renderStep(realDt);
+    }
+
+    // Deterministic simulation step at a fixed dt (VOTE-018). Runs 0..MAX_STEPS times
+    // per rendered frame depending on the accumulator. All state-advancing systems.
+    fixedStep(dt) {
         gameState.update(dt);
 
         // Refresh stealth detection before entities acquire targets this tick
@@ -671,6 +694,16 @@ export class Game {
         // Update force field system
         forceFieldSystem.update(dt);
 
+        // Clean up dead entities
+        this.cleanupDeadEntities();
+
+        // Survival wave director (no-op unless survival mode is active)
+        this.updateSurvival(dt);
+    }
+
+    // Render + IO, ONCE per rendered frame (never per sim sub-step): fog/mesh
+    // visibility, input, audio, minimap, HUD. Uses the real frame dt.
+    renderStep(dt) {
         // Update fog of war
         fogOfWar.update();
         fogOfWar.updateEntityVisibility();
@@ -686,12 +719,6 @@ export class Game {
 
         // Update HUD
         this.updateHUD();
-
-        // Clean up dead entities
-        this.cleanupDeadEntities();
-
-        // Survival wave director (no-op unless survival mode is active)
-        this.updateSurvival(dt);
     }
 
     cleanupDeadEntities() {
