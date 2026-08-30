@@ -19,6 +19,14 @@ export class SelectionPanel {
 
         this.selectedEntities = [];
         this.updateInterval = null;
+
+        // Dirty-flag render caches (perf: skip redundant DOM writes, no visual change)
+        this._lastMode = null; // 'empty' | 'single' | 'multi'
+        this._lastSingle = {}; // cached last-rendered values for the single-entity view
+        this._lastSingleEntityId = null;
+        this._lastMultiSig = null; // cached signature (joined ids) of last-rendered multi selection
+        this._lastCountText = null; // cached selection-count label
+        this._lastProdVisible = null; // cached production-view visibility (true|false)
     }
 
     init(parentSection) {
@@ -106,6 +114,13 @@ export class SelectionPanel {
 
     onSelectionChanged(selection) {
         this.selectedEntities = selection || [];
+        // Selection changed - invalidate render caches so the next tick fully re-renders
+        this._lastSingle = {};
+        this._lastSingleEntityId = null;
+        this._lastMultiSig = null;
+        this._lastMode = null;
+        this._lastCountText = null;
+        this._lastProdVisible = null;
         this.updateDisplay();
     }
 
@@ -113,13 +128,19 @@ export class SelectionPanel {
         // Filter out dead entities
         this.selectedEntities = this.selectedEntities.filter(e => !e.dead);
 
-        // Update count
+        // Update count (guarded - textContent write replaces the text node even when identical)
         if (this.selectionCount) {
-            this.selectionCount.textContent = this.selectedEntities.length > 0 ?
+            const countText = this.selectedEntities.length > 0 ?
                 `(${this.selectedEntities.length})` : '';
+            if (this._lastCountText !== countText) {
+                this.selectionCount.textContent = countText;
+                this._lastCountText = countText;
+            }
         }
 
         if (this.selectedEntities.length === 0) {
+            // Already showing the empty view - skip the classList churn
+            if (this._lastMode === 'empty') return;
             this.showEmptyState();
             return;
         }
@@ -131,47 +152,88 @@ export class SelectionPanel {
         }
     }
 
+    // Switch which of the three main views is visible, only writing classes on a
+    // real mode transition (classList toggles fire attribute mutations every call otherwise).
+    _setActiveView(mode) {
+        if (this._lastMode === mode) return;
+        this.emptyView.classList.toggle('hidden', mode !== 'empty');
+        this.singleView.classList.toggle('hidden', mode !== 'single');
+        this.multiView.classList.toggle('hidden', mode !== 'multi');
+        this._lastMode = mode;
+    }
+
+    // Show/hide the production sub-view, only writing on a true/false transition.
+    _setProductionVisible(visible) {
+        if (this._lastProdVisible === visible) return;
+        this.productionView.classList.toggle('hidden', !visible);
+        this._lastProdVisible = visible;
+    }
+
     showEmptyState() {
-        this.emptyView.classList.remove('hidden');
-        this.singleView.classList.add('hidden');
-        this.multiView.classList.add('hidden');
-        this.productionView.classList.add('hidden');
+        this._setActiveView('empty');
+        this._setProductionVisible(false);
     }
 
     showSingleView(entity) {
         if (!entity) return;
 
-        this.emptyView.classList.add('hidden');
-        this.singleView.classList.remove('hidden');
-        this.multiView.classList.add('hidden');
+        this._setActiveView('single');
+
+        // A fresh entity (selection changed to a different id) always fully renders
+        if (this._lastSingleEntityId !== entity.id) {
+            this._lastSingle = {};
+            this._lastSingleEntityId = entity.id;
+        }
+        const cache = this._lastSingle;
 
         // Update portrait
         const icon = this.getEntityIcon(entity);
-        document.getElementById('entityIcon').textContent = icon;
+        if (cache.icon !== icon) {
+            document.getElementById('entityIcon').textContent = icon;
+            cache.icon = icon;
+        }
 
         // Update health bar
         const maxHealth = entity.maxHealth || 1;
         const healthPercent = ((entity.health || 0) / maxHealth) * 100;
-        const healthFill = document.getElementById('entityHealthFill');
-        healthFill.style.width = `${healthPercent}%`;
-        healthFill.className = 'health-fill';
-        if (healthPercent < 25) healthFill.classList.add('critical');
-        else if (healthPercent < 50) healthFill.classList.add('damaged');
-
-        // Update info
-        document.getElementById('entityName').textContent = this.getEntityDisplayName(entity);
-
-        // Show construction status if building is under construction
-        if (entity.isBuilding && entity.isConstructing) {
-            const pct = Math.floor((entity.constructionProgress || 0) * 100);
-            document.getElementById('entityType').textContent = `Constructing... ${pct}%`;
-        } else {
-            document.getElementById('entityType').textContent = entity.isBuilding ? 'Structure' : 'Unit';
+        // Round for comparison only, so sub-pixel jitter does not force a write.
+        // The write itself still uses the exact value - visual output is unchanged.
+        const healthPercentRounded = Math.round(healthPercent * 10) / 10;
+        if (cache.healthPercentRounded !== healthPercentRounded) {
+            const healthFill = document.getElementById('entityHealthFill');
+            healthFill.style.width = `${healthPercent}%`;
+            healthFill.className = 'health-fill';
+            if (healthPercent < 25) healthFill.classList.add('critical');
+            else if (healthPercent < 50) healthFill.classList.add('damaged');
+            cache.healthPercentRounded = healthPercentRounded;
         }
 
-        // Update stats
+        // Update info
+        const displayName = this.getEntityDisplayName(entity);
+        if (cache.name !== displayName) {
+            document.getElementById('entityName').textContent = displayName;
+            cache.name = displayName;
+        }
+
+        // Show construction status if building is under construction
+        let typeText;
+        if (entity.isBuilding && entity.isConstructing) {
+            const pct = Math.floor((entity.constructionProgress || 0) * 100);
+            typeText = `Constructing... ${pct}%`;
+        } else {
+            typeText = entity.isBuilding ? 'Structure' : 'Unit';
+        }
+        if (cache.typeText !== typeText) {
+            document.getElementById('entityType').textContent = typeText;
+            cache.typeText = typeText;
+        }
+
+        // Update stats (biggest churn source - guard the innerHTML write with a string compare)
         const statsHtml = this.getEntityStatsHtml(entity);
-        document.getElementById('entityStats').innerHTML = statsHtml;
+        if (cache.statsHtml !== statsHtml) {
+            document.getElementById('entityStats').innerHTML = statsHtml;
+            cache.statsHtml = statsHtml;
+        }
 
         // Show production if building has queue (buildQueue not productionQueue)
         if (entity.isBuilding && entity.buildQueue && entity.buildQueue.length > 0) {
@@ -180,12 +242,12 @@ export class SelectionPanel {
             // Show construction progress bar in production view
             this.showConstructionProgress(entity);
         } else {
-            this.productionView.classList.add('hidden');
+            this._setProductionVisible(false);
         }
     }
 
     showConstructionProgress(building) {
-        this.productionView.classList.remove('hidden');
+        this._setProductionVisible(true);
 
         const pct = Math.floor((building.constructionProgress || 0) * 100);
         document.getElementById('prodIcon').textContent = '🔨';
@@ -198,13 +260,26 @@ export class SelectionPanel {
     }
 
     showMultiView(entities) {
-        this.emptyView.classList.add('hidden');
-        this.singleView.classList.add('hidden');
-        this.multiView.classList.remove('hidden');
-        this.productionView.classList.add('hidden');
+        this._setActiveView('multi');
+        this._setProductionVisible(false);
 
-        // Build grid
         const grid = document.getElementById('multiGrid');
+        const signature = entities.map(e => e.id).join(',');
+
+        if (signature === this._lastMultiSig) {
+            // Selection SET unchanged - skip the innerHTML rebuild, just refresh
+            // health bars in place (same order as the last rebuild)
+            const children = grid.children;
+            for (let i = 0; i < entities.length && i < children.length; i++) {
+                const entity = entities[i];
+                const healthPercent = (entity.health / entity.maxHealth) * 100;
+                const fillEl = children[i].querySelector('.multi-unit-health-fill');
+                if (fillEl) fillEl.style.width = healthPercent + '%';
+            }
+            return;
+        }
+
+        // Selection SET changed - full rebuild (preserves click handlers)
         grid.innerHTML = '';
 
         for (const entity of entities) {
@@ -229,10 +304,12 @@ export class SelectionPanel {
 
             grid.appendChild(item);
         }
+
+        this._lastMultiSig = signature;
     }
 
     showProductionQueue(building) {
-        this.productionView.classList.remove('hidden');
+        this._setProductionVisible(true);
 
         // Use buildQueue (the actual property name in Building class)
         const queue = building.buildQueue || [];
