@@ -15,6 +15,13 @@ const MUZZLE_POOL_SIZE = 12;   // reused round-robin, bounds cost, no per-shot a
 const MUZZLE_MS = 70;          // flash lifetime
 const MUZZLE_COLOR = new BABYLON.Color3(1, 0.82, 0.45); // warm muzzle glow
 
+const MOVE_PING_POOL_SIZE = 6;    // reused round-robin, bounds cost, no per-click alloc
+const MOVE_PING_MS = 400;         // ring lifetime
+const MOVE_PING_START_SCALE = 0.3;
+const MOVE_PING_END_SCALE = 2.5;
+const MOVE_PING_PEAK_ALPHA = 0.35; // subtle feedback, not a flashbang
+const MOVE_PING_COLOR = new BABYLON.Color3(0.4, 0.85, 1); // soft cyan/white UI accent
+
 /**
  * GraphicsManager - Manages post-processing and visual quality settings
  * Supports bloom, FXAA, SSAO, shadows, and motion blur
@@ -41,6 +48,10 @@ class GraphicsManagerClass {
         this.muzzlePool = [];        // reusable additive muzzle-flash planes
         this.muzzlePoolCursor = 0;
         this.muzzleMat = null;       // shared additive material for all muzzle flashes
+
+        this.movePingPool = [];      // reusable move-command ping rings
+        this.movePingPoolCursor = 0;
+        this.movePingMat = null;     // shared additive material for all move pings
 
         this.energyGlow = null; // selective GlowLayer for weapon/force-field energy
     }
@@ -71,6 +82,9 @@ class GraphicsManagerClass {
 
         // Muzzle flash: pop a brief additive glow sprite at the shooter on fire
         eventBus.on(GameEvents.COMBAT_PROJECTILE_FIRED, (data) => this.muzzleFlash(data));
+
+        // Move-command ping: pop a brief expanding ring at the move destination
+        eventBus.on(GameEvents.COMMAND_MOVE, (data) => this.movePing(data));
 
         // Death FX burst: buildings do not self-explode on death (units already do
         // in Unit.die). Give a bigger burst on building death via the existing pathway.
@@ -414,6 +428,68 @@ class GraphicsManagerClass {
     }
 
     /**
+     * Pop a brief expanding+fading ring at a move-command destination. Pooled
+     * flat torus meshes reused round-robin (no per-click allocation). Skipped
+     * at LOW quality to bound cost, same as attachTrail's HIGH/ULTRA gate.
+     */
+    movePing(data) {
+        if (!data || !this.scene) return;
+        // Quality gate: skip on LOW, this is pure feedback polish
+        if (this.currentLevel === 'LOW') return;
+
+        // Lazy-build the shared additive material + ring pool
+        if (!this.movePingMat) {
+            const mat = new BABYLON.StandardMaterial('movePingMat', this.scene);
+            mat.emissiveColor = MOVE_PING_COLOR;
+            mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+            mat.specularColor = new BABYLON.Color3(0, 0, 0);
+            mat.disableLighting = true;
+            mat.alphaMode = BABYLON.Engine.ALPHA_ADD;
+            mat.backFaceCulling = false;
+            this.movePingMat = mat;
+        }
+        if (this.movePingPool.length === 0) {
+            for (let i = 0; i < MOVE_PING_POOL_SIZE; i++) {
+                const ring = BABYLON.MeshBuilder.CreateTorus('movePing_' + i, {
+                    diameter: 2,
+                    thickness: 0.2,
+                    tessellation: 24
+                }, this.scene);
+                ring.material = this.movePingMat;
+                ring.rotation.x = Math.PI / 2; // lie flat on the XZ plane
+                ring.isPickable = false;
+                ring.setEnabled(false);
+                this.movePingPool.push(ring);
+            }
+        }
+
+        const ring = this.movePingPool[this.movePingPoolCursor];
+        this.movePingPoolCursor = (this.movePingPoolCursor + 1) % this.movePingPool.length;
+
+        ring.position.set(data.x, 0.2, data.z);
+        ring.scaling.set(MOVE_PING_START_SCALE, MOVE_PING_START_SCALE, MOVE_PING_START_SCALE);
+        ring.visibility = MOVE_PING_PEAK_ALPHA;
+        ring.setEnabled(true);
+
+        const start = performance.now();
+        const animate = () => {
+            // Scene/ring may be disposed between frames
+            if (!this.scene || ring.isDisposed()) return;
+            const t = (performance.now() - start) / MOVE_PING_MS;
+            if (t >= 1) {
+                ring.visibility = 0;
+                ring.setEnabled(false);
+            } else {
+                const scale = MOVE_PING_START_SCALE + (MOVE_PING_END_SCALE - MOVE_PING_START_SCALE) * t;
+                ring.scaling.set(scale, scale, scale);
+                ring.visibility = MOVE_PING_PEAK_ALPHA * (1 - t); // fade out over the ring lifetime
+                setTimeout(animate, 16);
+            }
+        };
+        setTimeout(animate, 16);
+    }
+
+    /**
      * Spawn a scaled explosion burst when a building is destroyed. Reuses the
      * existing pooled explosion ParticleSystem (and death sound) via the
      * COMBAT_EXPLOSION event handled in CombatSystem.createExplosion, so nothing
@@ -528,6 +604,10 @@ class GraphicsManagerClass {
         for (const p of this.muzzlePool) { if (p && !p.isDisposed()) p.dispose(); }
         this.muzzlePool = [];
         if (this.muzzleMat) { this.muzzleMat.dispose(); this.muzzleMat = null; }
+
+        for (const r of this.movePingPool) { if (r && !r.isDisposed()) r.dispose(); }
+        this.movePingPool = [];
+        if (this.movePingMat) { this.movePingMat.dispose(); this.movePingMat = null; }
 
         if (this.energyGlow) { this.energyGlow.dispose(); this.energyGlow = null; }
 

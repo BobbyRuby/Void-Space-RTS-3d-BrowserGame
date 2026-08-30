@@ -234,6 +234,7 @@ export const GameEvents = {
 
     // Command events
     COMMAND_COMPLETE: 'command:complete',
+    COMMAND_MOVE: 'command:move',
 
     // Unit command events
     UNIT_STOP: 'unit:stop',

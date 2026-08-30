@@ -515,6 +515,7 @@ export class InputManager {
         } else if (worldPos) {
             // Empty space - move
             selectionSystem.commandMove(worldPos.x, worldPos.z);
+            eventBus.emit(GameEvents.COMMAND_MOVE, { x: worldPos.x, z: worldPos.z });
         }
     }
 
