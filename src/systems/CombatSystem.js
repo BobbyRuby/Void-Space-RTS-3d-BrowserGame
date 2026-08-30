@@ -582,14 +582,19 @@ export class CombatSystem {
             const prevProgress = proj.progress;
             proj.progress += dt * proj.speed;
 
-            let targetPos = proj.targetPos;
+            // Homing: track the live target position IN PLACE (no per-frame clone).
             if (proj.homing && proj.target && proj.target.mesh && !proj.target.dead) {
-                targetPos = proj.target.mesh.position.clone();
-                proj.targetPos = targetPos;
+                proj.targetPos.copyFrom(proj.target.mesh.position);
             }
+            const targetPos = proj.targetPos;
 
-            const prevPos = BABYLON.Vector3.Lerp(proj.start, targetPos, prevProgress);
-            proj.mesh.position = BABYLON.Vector3.Lerp(proj.start, targetPos, proj.progress);
+            // Scratch-vector lerp (VOTE-018 pooling): write into a reused vector + the mesh
+            // position IN PLACE via LerpToRef, instead of allocating 2 Vector3 per projectile
+            // per frame (GC churn = the browser perf killer). Positions are behavior-identical.
+            if (!this._scratchPrevPos) this._scratchPrevPos = new BABYLON.Vector3();
+            const prevPos = this._scratchPrevPos;
+            BABYLON.Vector3.LerpToRef(proj.start, targetPos, prevProgress, prevPos);
+            BABYLON.Vector3.LerpToRef(proj.start, targetPos, proj.progress, proj.mesh.position);
 
             // Check for force field collision
             const fieldHit = forceFieldSystem.checkProjectileCollision(
