@@ -601,7 +601,27 @@
                 this.createSmallAsteroid(parent, size, mat);
             }
 
-            return parent;
+            // Merge all child meshes into a single mesh to cut draw calls.
+            // parent is still at the origin here (SceneManager positions it later),
+            // so each child's local offset equals its world transform and MergeMeshes
+            // bakes them correctly into one centered mesh.
+            const kids = parent.getChildMeshes();
+            const merged = BABYLON.Mesh.MergeMeshes(kids, true, true, undefined, false, true);
+            if (!merged) {
+                // Merge failed (or nothing to merge) - fall back to the unmerged parent.
+                return parent;
+            }
+
+            merged.name = 'asteroid_' + index;
+            merged.isPickable = false;
+            merged.doNotSyncBoundingInfo = true;
+            // SceneManager animates asteroid.mesh.rotation (euler) each frame; make
+            // sure MergeMeshes did not leave a rotationQuaternion that would override
+            // and silently freeze the per-asteroid spin.
+            merged.rotationQuaternion = null;
+            parent.dispose();
+
+            return merged;
         },
 
         createLargeAsteroid: function(parent, size, mat) {
