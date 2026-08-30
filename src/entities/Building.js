@@ -9,6 +9,7 @@ import { BUILDINGS, UNITS, TEAMS, TEAM_COLORS, CONFIG } from '../core/Config.js?
 import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 import { gameState } from '../core/GameState.js?v=20260119';
 import { MaterialPool } from '../core/MaterialPool.js?v=20260119';
+import { getSeededRandom } from '../core/SeededRandom.js?v=20260119';
 
 export class Building extends Entity {
     constructor(x, z, team, type, scene) {
@@ -861,7 +862,7 @@ export class Building extends Entity {
             console.warn(`spawnUnit: Unknown unit type '${unitType}'`);
             return;
         }
-        const angle = Math.random() * Math.PI * 2;
+        const angle = getSeededRandom().next() * Math.PI * 2;
         const dist = this.size + 8;
         const x = this.mesh.position.x + Math.cos(angle) * dist;
         const z = this.mesh.position.z + Math.sin(angle) * dist;

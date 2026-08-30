@@ -289,15 +289,15 @@ export class ResourceSystem {
 
             // Spread chance - time-based (per second), disabled when regrow is 0
             if (CONFIG.ORE_REGROW_RATE > 0 && !ore.depleted && ore.amount > ore.maxAmount * 0.8
-                && Math.random() < CONFIG.ORE_SPREAD_CHANCE * dt) {
+                && getSeededRandom().next() < CONFIG.ORE_SPREAD_CHANCE * dt) {
                 this.trySpreadOre(ore);
             }
         }
     }
 
     trySpreadOre(ore) {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 15 + Math.random() * 10;
+        const angle = getSeededRandom().next() * Math.PI * 2;
+        const dist = 15 + getSeededRandom().next() * 10;
         const newX = ore.x + Math.cos(angle) * dist;
         const newZ = ore.z + Math.sin(angle) * dist;
 
