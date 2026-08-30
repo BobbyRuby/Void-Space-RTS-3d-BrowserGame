@@ -7,6 +7,9 @@ import { GRAPHICS_SETTINGS, graphicsLevel } from '../core/Config.js?v=20260119';
 import { eventBus, GameEvents } from '../core/EventBus.js?v=20260119';
 import { graphicsManager } from '../rendering/GraphicsManager.js?v=20260119';
 import { soundManager } from '../audio/SoundManager.js?v=20260119';
+import { combatFX } from './CombatFX.js?v=20260119';
+
+const SCREEN_FX_STORAGE_KEY = 'voidspace.screenFx';
 
 // Note: eventBus and GameEvents are used for emitting SETTINGS_OPEN/SETTINGS_CLOSE events
 // and for mirroring GRAPHICS_QUALITY_CHANGED when the tier changes outside this panel.
@@ -52,6 +55,10 @@ export class SettingsPanel {
                         </div>
                         <div class="quality-description" id="qualityDescription">
                             ${this.getQualityDescription(this.currentLevel)}
+                        </div>
+                        <div class="audio-row">
+                            <label for="screenFxToggle">Screen FX</label>
+                            <input type="checkbox" id="screenFxToggle">
                         </div>
                     </div>
                     <div class="settings-section">
@@ -166,6 +173,23 @@ export class SettingsPanel {
                 this.setQuality(level);
             });
         });
+
+        // Screen FX toggle (combat flash / damage vignette). Photosensitivity
+        // override, defaults on unless the player has turned it off before.
+        const screenFxBox = this.container.querySelector('#screenFxToggle');
+        if (screenFxBox) {
+            let screenFxOn = true;
+            try {
+                const raw = localStorage.getItem(SCREEN_FX_STORAGE_KEY);
+                screenFxOn = raw !== '0';
+            } catch (error) {
+                screenFxOn = true;
+            }
+            screenFxBox.checked = screenFxOn;
+            screenFxBox.addEventListener('change', () => {
+                combatFX.setEnabled(screenFxBox.checked);
+            });
+        }
 
         // Audio volume sliders. Reflect persisted values first, then wire changes.
         const muteBox = this.container.querySelector('#muteAll');

@@ -1698,3 +1698,52 @@
             .lobby-footer span {
                 color: #00aaff;
             }
+
+/* ===== CombatFX (screen-edge glow / vignette cues) ===== */
+/* z-index kept below HUD panels (survival-hud, mainPanel = 20) so the cue
+   never visually covers UI; pointer-events forced none so it never blocks
+   clicks, overriding "#hud > * { pointer-events: auto; }" above. */
+.combat-fx-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none !important;
+    z-index: 5;
+    opacity: 1;
+    background: none;
+}
+
+.combat-fx-overlay.fx-explosion-flash {
+    animation: fxExplosionFlash 220ms ease-out;
+}
+
+.combat-fx-overlay.fx-damage-vignette {
+    animation: fxDamageVignette 260ms ease-out;
+}
+
+@keyframes fxExplosionFlash {
+    0% {
+        background: radial-gradient(ellipse at center, rgba(255,150,40,0) 55%, rgba(255,150,40,0.15) 100%);
+    }
+    100% {
+        background: radial-gradient(ellipse at center, rgba(255,150,40,0) 55%, rgba(255,150,40,0) 100%);
+    }
+}
+
+@keyframes fxDamageVignette {
+    0% {
+        background: radial-gradient(ellipse at center, rgba(200,20,20,0) 50%, rgba(200,20,20,0.18) 100%);
+    }
+    100% {
+        background: radial-gradient(ellipse at center, rgba(200,20,20,0) 50%, rgba(200,20,20,0) 100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .combat-fx-overlay,
+    .fx-explosion-flash,
+    .fx-damage-vignette {
+        animation: none !important;
+        background: none !important;
+        opacity: 0 !important;
+    }
+}
