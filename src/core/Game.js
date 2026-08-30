@@ -187,6 +187,38 @@ export class Game {
                 let h = 5381;
                 for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
                 return { hash: h >>> 0, entities: ents.length, len: s.length };
+            },
+            // Reset the SIM (not the renderer) to a deterministic seeded initial state:
+            // reseed the global RNG, rebuild gameState, re-spawn bases + aliens/survival.
+            // Old meshes leak (test-only, does not affect the state hash).
+            resetSimFromSeed: (seed) => {
+                resetSeededRandom(String(seed));
+                gameState.reset();
+                this.spawnPlayerBases(this.scene);
+                if (CONFIG.MODE === GAME_MODES.SURVIVAL) this.initSurvival();
+                else this.spawnNeutralAliens(this.scene);
+                this.updateResourceCapacity();
+            },
+            // Self-contained empirical determinism proof: two same-seed runs must match,
+            // a different-seed run must differ (positive control - a hash identical across
+            // seeds would be measuring nothing).
+            runDeterminismTest: (seed = 42, steps = 600) => {
+                const dt = CONFIG.FIXED_DT || (1 / 60);
+                const run = (s) => {
+                    window.__void.resetSimFromSeed(s);
+                    for (let i = 0; i < steps; i++) this.fixedStep(dt);
+                    return window.__void.hashState();
+                };
+                const a = run(seed), b = run(seed), c = run(seed + 1);
+                const result = {
+                    seed, steps,
+                    h1: a.hash, h2: b.hash, sameSeedMatch: a.hash === b.hash,
+                    diffSeedHash: c.hash, variesBySeed: c.hash !== a.hash,
+                    entities: a.entities,
+                    verdict: (a.hash === b.hash && c.hash !== a.hash) ? 'DETERMINISTIC' : 'FAIL'
+                };
+                console.log('[void determinism]', JSON.stringify(result));
+                return result;
             }
         };
         console.log('[void debug] window.__void ready (stepFixed, hashState); seed pinned via ?seed=');
