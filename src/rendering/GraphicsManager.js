@@ -482,6 +482,20 @@ class GraphicsManagerClass {
     }
 
     /**
+     * Single entry point for the settings UI: persist the tier to Config module
+     * state (and window, for external scripts) AND rebuild the pipeline. Returns
+     * false on an unknown level, leaving the current pipeline unchanged.
+     * @param {string} level - 'LOW' | 'MEDIUM' | 'HIGH' | 'ULTRA'
+     * @returns {boolean}
+     */
+    setQuality(level) {
+        if (!GRAPHICS_SETTINGS[level]) return false;
+        setGraphicsLevel(level);
+        this.applySettings(level);
+        return true;
+    }
+
+    /**
      * Cycle to next quality level
      */
     cycleQuality() {

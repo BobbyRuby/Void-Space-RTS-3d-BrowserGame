@@ -1059,8 +1059,9 @@ export const GRAPHICS_SETTINGS = {
     }
 };
 
-// Current graphics level (can be changed at runtime)
-export let graphicsLevel = 'MEDIUM';
+// Current graphics level (can be changed at runtime). Default HIGH per VOTE-019
+// (board-carried 2026-08-30); the settings UI + localStorage override it per user.
+export let graphicsLevel = 'HIGH';
 
 export function setGraphicsLevel(level) {
     if (GRAPHICS_SETTINGS[level]) {
