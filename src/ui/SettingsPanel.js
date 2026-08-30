@@ -223,8 +223,9 @@ export class SettingsPanel {
             descEl.innerHTML = this.getQualityDescription(level);
         }
 
-        // Apply to graphics manager
-        graphicsManager.applySettings(level);
+        // Apply via the single seam (setGraphicsLevel + applySettings + emit),
+        // so a runtime change also syncs Config/window and is not stale.
+        graphicsManager.setQuality(level);
 
         // Persist so the chosen tier survives reload
         try {
