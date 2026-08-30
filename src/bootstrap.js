@@ -4,11 +4,25 @@
 import { debugLogger } from './core/DebugLogger.js?v=20260119';
 import { game } from './core/Game.js?v=20260119';
 import { preGameLobby } from './ui/PreGameLobby.js?v=20260119';
+import { setGraphicsLevel, GRAPHICS_SETTINGS } from './core/Config.js?v=20260119';
 import './ui/PauseMenu.js?v=20260119';
 import './ui/SurvivalHUD.js?v=20260119';
 
 // Initialize and start the game with pre-game lobby
 window.addEventListener('DOMContentLoaded', async () => {
+    // Boot-read persisted graphics quality tier (voted default is HIGH).
+    // Must run before the scene builds so GraphicsManager.init picks up the right tier.
+    try {
+        const saved = localStorage.getItem('voidspace.graphicsLevel');
+        if (saved && GRAPHICS_SETTINGS[saved]) {
+            setGraphicsLevel(saved);
+        } else {
+            setGraphicsLevel('HIGH');
+        }
+    } catch (error) {
+        setGraphicsLevel('HIGH');
+    }
+
     // Hide loading screen initially (lobby will show instead)
     const loadingScreen = document.getElementById('loadingScreen');
     if (loadingScreen) {

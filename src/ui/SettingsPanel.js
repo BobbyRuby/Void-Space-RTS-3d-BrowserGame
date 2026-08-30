@@ -9,6 +9,9 @@ import { graphicsManager } from '../rendering/GraphicsManager.js?v=20260119';
 import { soundManager } from '../audio/SoundManager.js?v=20260119';
 
 // Note: eventBus and GameEvents are used for emitting SETTINGS_OPEN/SETTINGS_CLOSE events
+// and for mirroring GRAPHICS_QUALITY_CHANGED when the tier changes outside this panel.
+
+const GRAPHICS_LEVEL_STORAGE_KEY = 'voidspace.graphicsLevel';
 
 export class SettingsPanel {
     constructor() {
@@ -25,6 +28,12 @@ export class SettingsPanel {
     }
 
     createUI() {
+        // Reflect the tier actually applied at boot (persisted, or the voted HIGH default),
+        // not the static module import which stays at Config's own default value.
+        this.currentLevel = typeof graphicsManager.getCurrentLevel === 'function'
+            ? (graphicsManager.getCurrentLevel() || graphicsLevel)
+            : graphicsLevel;
+
         // Main container (modal overlay)
         this.container = document.createElement('div');
         this.container.id = 'settingsPanel';
@@ -191,6 +200,11 @@ export class SettingsPanel {
 
         // Update performance stats periodically when visible
         this.perfUpdateInterval = null;
+
+        // Stay in sync if the graphics tier changes outside this panel
+        eventBus.on(GameEvents.GRAPHICS_QUALITY_CHANGED, (data) => {
+            this.onExternalGraphicsQualityChanged(data?.level);
+        });
     }
 
     setQuality(level) {
@@ -211,6 +225,39 @@ export class SettingsPanel {
 
         // Apply to graphics manager
         graphicsManager.applySettings(level);
+
+        // Persist so the chosen tier survives reload
+        try {
+            localStorage.setItem(GRAPHICS_LEVEL_STORAGE_KEY, level);
+        } catch (error) {
+            // Private mode or storage disabled; not fatal
+        }
+    }
+
+    // Mirror a GRAPHICS_QUALITY_CHANGED event that did not originate from this panel's
+    // own setQuality() call (e.g. changed elsewhere at runtime). Does not call
+    // applySettings again, it only keeps the UI and persisted value in sync.
+    onExternalGraphicsQualityChanged(level) {
+        if (!level || !GRAPHICS_SETTINGS[level] || level === this.currentLevel) return;
+
+        this.currentLevel = level;
+
+        if (this.container) {
+            this.container.querySelectorAll('.quality-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.level === level);
+            });
+
+            const descEl = this.container.querySelector('#qualityDescription');
+            if (descEl) {
+                descEl.innerHTML = this.getQualityDescription(level);
+            }
+        }
+
+        try {
+            localStorage.setItem(GRAPHICS_LEVEL_STORAGE_KEY, level);
+        } catch (error) {
+            // Private mode or storage disabled; not fatal
+        }
     }
 
     updatePerfStats() {
