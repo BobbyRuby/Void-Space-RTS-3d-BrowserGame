@@ -148,6 +148,11 @@ export class ForceFieldSystem {
             // Skip the two generators we're connecting
             if (building === genA || building === genC) continue;
 
+            // A team's own buildings never obstruct its own force field: your base
+            // (command center, etc.) should not block a field you are powering.
+            // Only enemy or neutral structures obstruct the beam.
+            if (building.team === genA.team) continue;
+
             // Use building's size for threshold (larger buildings = larger block radius)
             const blockRadius = (building.def?.size || 6) / 2 + 2;
 
